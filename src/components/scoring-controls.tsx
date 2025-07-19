@@ -137,22 +137,24 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const selectedTeam = teams.find(t => t.id === Number(form.watch('teamId')));
   
-  // Effect to handle side-effects of changing pointType
-  useEffect(() => {
-    const isTackle = ['tackle', 'tackle-lona'].includes(selectedPointType);
+  const handlePointTypeChange = (newPointType: 'raid' | 'tackle' | 'bonus' | 'raid-bonus' | 'lona-points' | 'lona-bonus-points' | 'tackle-lona' | 'line-out') => {
+    const isTackle = ['tackle', 'tackle-lona'].includes(newPointType);
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
-    form.setValue('teamId', newTeamId);
-    form.setValue('playerId', ''); // Reset player when type changes
-    
-    // Reset points based on the new type
     let defaultPoints = 1;
-    if (['lona-bonus-points'].includes(selectedPointType)) {
+    if (['lona-bonus-points'].includes(newPointType)) {
       defaultPoints = 6;
     }
-    form.setValue('points', defaultPoints);
 
-  }, [selectedPointType, raidingTeamId, form]);
+    // Batch state updates
+    form.reset({
+        ...form.getValues(),
+        pointType: newPointType,
+        teamId: newTeamId,
+        playerId: '',
+        points: defaultPoints,
+    });
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     let points = values.points;
@@ -272,7 +274,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                       <FormLabel>Point Type</FormLabel>
                       <FormControl>
                         <RadioGroup 
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => handlePointTypeChange(value as any)}
                           value={field.value} 
                           className="grid grid-cols-2 gap-2"
                         >
