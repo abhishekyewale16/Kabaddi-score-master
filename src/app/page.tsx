@@ -15,6 +15,7 @@ import { generateCommentary } from '@/ai/flows/generate-commentary';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { FoulPlay } from '@/components/foul-play';
 
 
 const INITIAL_MATCH_DURATION = 20;
@@ -96,12 +97,38 @@ export default function Home() {
           }
           return { ...prev, isRunning: false };
         });
+
+        // Decrement suspension timers
+        setTeams(currentTeams => {
+            let suspensionInProgress = false;
+            const newTeams = currentTeams.map(team => ({
+                ...team,
+                players: team.players.map(player => {
+                    if (player.suspensionTimer > 0) {
+                        suspensionInProgress = true;
+                        const newTimer = player.suspensionTimer - 1;
+                        if (newTimer === 0) {
+                             toast({
+                                title: "Suspension Over",
+                                description: `${player.name} (${team.name}) is now eligible to play.`,
+                            });
+                        }
+                        return { ...player, suspensionTimer: newTimer };
+                    }
+                    return player;
+                })
+            })) as [Team, Team];
+            
+            // Only update state if a timer was actually decremented
+            return suspensionInProgress ? newTeams : currentTeams;
+        });
+
       }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timer.isRunning, timer.isTimeout]);
+  }, [timer.isRunning, timer.isTimeout, toast]);
   
   const handleToggleTimer = useCallback(() => {
     const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
@@ -166,27 +193,30 @@ export default function Home() {
 
     setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
     setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
-
+    
+    let teamName = '';
     const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const teamIndex = newTeams.findIndex(t => t.id === teamId);
     if (teamIndex !== -1) {
         newTeams[teamIndex].timeoutsRemaining -= 1;
-        setTeams(newTeams);
-        toast({
-            title: "Timeout Called",
-            description: `${newTeams[teamIndex].name} has called a timeout.`,
-        });
+        teamName = newTeams[teamIndex].name;
     }
+
+    setTeams(newTeams);
+    toast({
+        title: "Timeout Called",
+        description: `${teamName} has called a timeout.`,
+    });
 
 }, [teams, timer.isRunning, timer.isTimeout, toast]);
 
   const handleMatchDurationChange = useCallback((newDuration: number) => {
     const duration = isNaN(newDuration) || newDuration < 1 ? 1 : newDuration;
     setMatchDuration(duration);
-    if (!timer.isRunning) {
+    if (!timer.isRunning && isMatchPristine) {
         setTimer(prev => ({ ...prev, minutes: duration, seconds: 0 }));
     }
-  }, [timer.isRunning]);
+  }, [timer.isRunning, isMatchPristine]);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
@@ -467,46 +497,116 @@ export default function Home() {
 
   const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
     const teamKey = teamId === 1 ? 'team1' : 'team2';
-    if (!isSubstitutionPeriod || substitutionsMadeThisBreak[teamKey] >= 2) {
+    if (!isSubstitutionPeriod) {
+        toast({
+            title: "Substitution Not Allowed",
+            description: "Substitutions can only be made during a timeout or halftime.",
+            variant: "destructive",
+        });
+        return;
+    }
+    if (substitutionsMadeThisBreak[teamKey] >= 2) {
       toast({
-        title: "Substitution Not Allowed",
-        description: "Substitutions can only be made during a timeout or halftime, with a limit of 2 per break for each team.",
+        title: "Substitution Limit Reached",
+        description: "A team can only make 2 substitutions per break.",
         variant: "destructive",
       });
       return;
     }
-  
-    let playerInName: string | undefined = '';
-    let playerOutName: string | undefined = '';
-  
-    const currentTeam = teams.find(t => t.id === teamId);
-    if (currentTeam) {
-      playerInName = currentTeam.players.find(p => p.id === playerInId)?.name;
-      playerOutName = currentTeam.players.find(p => p.id === playerOutId)?.name;
+
+    const currentTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    const team = currentTeams.find(t => t.id === teamId);
+    if (!team) return;
+
+    const playerIn = team.players.find(p => p.id === playerInId);
+    const playerOut = team.players.find(p => p.id === playerOutId);
+
+    if (!playerIn || !playerOut) return;
+    
+    // Additional check for red-carded players
+    if (playerIn.isRedCarded || playerOut.isRedCarded) {
+        toast({
+            title: "Substitution Not Allowed",
+            description: "A red-carded player cannot be part of a substitution.",
+            variant: "destructive",
+        });
+        return;
     }
+
+    const teamIndex = currentTeams.findIndex(t => t.id === teamId)!;
+    const playerInIndex = currentTeams[teamIndex].players.findIndex(p => p.id === playerInId)!;
+    const playerOutIndex = currentTeams[teamIndex].players.findIndex(p => p.id === playerOutId)!;
+
+    currentTeams[teamIndex].players[playerInIndex].isPlaying = true;
+    currentTeams[teamIndex].players[playerOutIndex].isPlaying = false;
+    
+    setTeams(currentTeams);
   
-    if (playerInName && playerOutName) {
-      const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-      const teamIndex = newTeams.findIndex(t => t.id === teamId)!;
-      const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId)!;
-      const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId)!;
-  
-      newTeams[teamIndex].players[playerInIndex].isPlaying = true;
-      newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
-  
-      setTeams(newTeams);
-  
-      setSubstitutionsMadeThisBreak(prev => ({
-        ...prev,
-        [teamKey]: prev[teamKey] + 1,
-      }));
-  
-      toast({
-        title: "Substitution Successful",
-        description: `${playerInName} has been substituted in for ${playerOutName}.`,
-      });
-    }
+    setSubstitutionsMadeThisBreak(prev => ({
+      ...prev,
+      [teamKey]: prev[teamKey] + 1,
+    }));
+
+    toast({
+      title: "Substitution Successful",
+      description: `${playerIn.name} has been substituted in for ${playerOut.name}.`,
+    });
+
   }, [teams, isSubstitutionPeriod, substitutionsMadeThisBreak, toast]);
+
+  const handleIssueCard = useCallback((data: { teamId: number; playerId: number; cardType: 'green' | 'yellow' | 'red' }) => {
+    let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    const { teamId, playerId, cardType } = data;
+
+    const teamIndex = newTeams.findIndex(t => t.id === teamId);
+    if (teamIndex === -1) return;
+
+    const playerIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) return;
+
+    const player = newTeams[teamIndex].players[playerIndex];
+    const team = newTeams[teamIndex];
+    const opposingTeamIndex = 1 - teamIndex;
+    const opposingTeam = newTeams[opposingTeamIndex];
+    let commentaryCardType = cardType;
+
+    if (cardType === 'green') {
+        player.greenCards += 1;
+        if(player.greenCards > 1) { // Second green card becomes a yellow
+            player.yellowCards += 1;
+            opposingTeam.score += 1;
+            player.suspensionTimer = 120;
+            commentaryCardType = 'yellow'; // Upgrade for commentary
+        }
+    } else if (cardType === 'yellow') {
+        player.yellowCards += 1;
+        opposingTeam.score += 1;
+        if (player.yellowCards > 1) { // Second yellow becomes a red
+            player.isRedCarded = true;
+            player.isPlaying = false;
+            player.suspensionTimer = 0; // No timer, just out
+            commentaryCardType = 'red'; // Upgrade for commentary
+        } else {
+            player.suspensionTimer = 120; // 2 minutes
+        }
+    } else if (cardType === 'red') {
+        player.isRedCarded = true;
+        player.isPlaying = false;
+        opposingTeam.score += 1;
+    }
+
+    addCommentary({
+        eventType: `${commentaryCardType}_card`,
+        raidingTeam: team.name, // Team of the player getting carded
+        defendingTeam: opposingTeam.name,
+        raiderName: player.name, // Player getting carded
+        points: 1, // Technical point
+        team1Score: newTeams[0].score,
+        team2Score: newTeams[1].score,
+    });
+    
+    setTeams(newTeams);
+  }, [teams, addCommentary]);
 
   const handleExportStats = useCallback(() => {
     const wb = XLSX.utils.book_new();
@@ -542,7 +642,7 @@ export default function Home() {
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
-            "Status": p.isPlaying ? 'Active' : 'Substitute',
+            "Status": p.isRedCarded ? 'Red Card' : p.suspensionTimer > 0 ? `Suspended (${p.suspensionTimer}s)` : p.isPlaying ? 'Active' : 'Substitute',
             "Total Points": p.totalPoints,
             "Raid Points": p.raidPoints,
             "Bonus Points": p.bonusPoints,
@@ -551,7 +651,9 @@ export default function Home() {
             "Total Raids": p.totalRaids,
             "Successful Raids": p.successfulRaids,
             "Success Rate (%)": p.totalRaids > 0 ? parseFloat(((p.successfulRaids / p.totalRaids) * 100).toFixed(2)) : 0,
-            "Super Raids": p.superRaids
+            "Super Raids": p.superRaids,
+            "Green Cards": p.greenCards,
+            "Yellow Cards": p.yellowCards,
         }));
 
         const teamHeader = [
@@ -578,7 +680,7 @@ export default function Home() {
             }
         }
         
-        const dataRange = XLSX.utils.decode_range(ws['!ref'] || `A5:K${5 + team.players.length}`);
+        const dataRange = XLSX.utils.decode_range(ws['!ref'] || `A5:M${5 + team.players.length}`);
         for (let R = dataRange.s.r + 5; R <= dataRange.e.r; ++R) {
             for (let C = dataRange.s.c; C <= dataRange.e.c; ++C) {
                 const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
@@ -642,7 +744,7 @@ export default function Home() {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-3 space-y-8">
+            <div className="lg:col-span-2 space-y-8">
                <Scoreboard
                 teams={teams}
                 timer={timer}
@@ -658,7 +760,10 @@ export default function Home() {
                 onTakeTimeout={handleTakeTimeout}
                 isMatchPristine={isMatchPristine}
               />
-               <ScoringControls 
+               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
+            </div>
+            <div className="lg:col-span-1 space-y-8">
+                <ScoringControls 
                   teams={teams} 
                   raidingTeamId={raidingTeamId}
                   onAddScore={handleAddScore} 
@@ -666,14 +771,14 @@ export default function Home() {
                   onSwitchRaidingTeam={switchRaidingTeam}
                   isTimerRunning={timer.isRunning}
                 />
-               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
+                <FoulPlay teams={teams} onIssueCard={handleIssueCard} isTimerRunning={timer.isRunning} />
             </div>
           </div>
 
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod && substitutionsMadeThisBreak.team1 < 2} />
-              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod && substitutionsMadeThisBreak.team2 < 2} />
+              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team1} />
+              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team2} />
           </div>
           <div className="mt-8 flex justify-center">
               <Button onClick={handleExportStats} size="lg">

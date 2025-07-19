@@ -11,6 +11,10 @@ export interface Player {
   superRaids: number;
   superTacklePoints: number;
   isPlaying: boolean;
+  greenCards: number;
+  yellowCards: number;
+  isRedCarded: boolean;
+  suspensionTimer: number; // in seconds
 }
 
 export interface Team {

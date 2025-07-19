@@ -13,12 +13,13 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User, RefreshCw } from 'lucide-react';
+import { User, RefreshCw, AlertCircle, ShieldOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
+import { Badge } from './ui/badge';
 
 interface PlayerRowProps {
   player: Player;
@@ -33,8 +34,8 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
   const [substituteOpen, setSubstituteOpen] = useState(false);
   const [playerToSubstitute, setPlayerToSubstitute] = useState('');
 
-  const activePlayers = team.players.filter(p => p.isPlaying && p.id !== player.id);
-  const benchedPlayers = team.players.filter(p => !p.isPlaying && p.id !== player.id);
+  const activePlayers = team.players.filter(p => p.isPlaying && p.id !== player.id && !p.isRedCarded);
+  const benchedPlayers = team.players.filter(p => !p.isPlaying && p.id !== player.id && !p.isRedCarded);
 
   useEffect(() => {
     setName(player.name);
@@ -67,9 +68,21 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
       setPlayerToSubstitute('');
   }
 
+  const getPlayerStatus = () => {
+    if (player.isRedCarded) {
+        return <Badge variant="destructive" className="flex items-center gap-1.5"><ShieldOff className="w-3 h-3"/>Red Card</Badge>;
+    }
+    if (player.suspensionTimer > 0) {
+        const minutes = Math.floor(player.suspensionTimer / 60);
+        const seconds = player.suspensionTimer % 60;
+        return <Badge variant="secondary" className="flex items-center gap-1.5 bg-yellow-400 text-black hover:bg-yellow-400/80"><AlertCircle className="w-3 h-3"/>Suspended ({minutes}:{seconds.toString().padStart(2, '0')})</Badge>;
+    }
+    return player.isPlaying ? "Active" : "Bench";
+  }
+
   return (
-    <TableRow className={cn(!player.isPlaying && "opacity-60")}>
-      <TableCell className={cn("font-medium", player.isPlaying && "bg-destructive/10")}>
+    <TableRow className={cn(!player.isPlaying && "opacity-60", player.isRedCarded && "bg-destructive/20 opacity-40", player.suspensionTimer > 0 && "bg-yellow-400/20")}>
+      <TableCell className={cn("font-medium", player.isPlaying && !player.isRedCarded && player.suspensionTimer === 0 && "bg-destructive/10")}>
         <Input
           type="text"
           value={name}
@@ -77,10 +90,11 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-destructive-foreground/70"
+          disabled={player.isRedCarded}
         />
       </TableCell>
-      <TableCell className={cn("text-center", player.isPlaying ? 'font-semibold text-primary' : 'text-muted-foreground')}>
-        {player.isPlaying ? "Active" : "Bench"}
+      <TableCell className={cn("text-center", player.isPlaying ? 'font-semibold' : 'text-muted-foreground')}>
+        {getPlayerStatus()}
       </TableCell>
       <TableCell className="text-center">{player.totalPoints}</TableCell>
       <TableCell className="text-center">{player.raidPoints}</TableCell>
@@ -89,7 +103,7 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
       <TableCell className="text-center">
          <Dialog open={substituteOpen} onOpenChange={setSubstituteOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!isSubstitutionAllowed}>
+                <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!isSubstitutionAllowed || player.isRedCarded || player.suspensionTimer > 0}>
                     <RefreshCw className="w-4 h-4" />
                 </Button>
             </DialogTrigger>
@@ -131,9 +145,22 @@ interface PlayerStatsTableProps {
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
   onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
   isSubstitutionAllowed: boolean;
+  substitutionsMade: number;
 }
 
-export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer, isSubstitutionAllowed }: PlayerStatsTableProps) {
+export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer, isSubstitutionAllowed, substitutionsMade }: PlayerStatsTableProps) {
+  const canSubstitute = isSubstitutionAllowed && substitutionsMade < 2;
+  
+  const getSubDescription = () => {
+      if (!isSubstitutionAllowed) {
+          return 'Substitutions are only allowed during timeouts or halftime.';
+      }
+      if (substitutionsMade >= 2) {
+          return `Substitution limit (2) reached for this break.`;
+      }
+      return `Substitution is allowed for this team (${2-substitutionsMade} remaining).`;
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -141,7 +168,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer,
           <User className="text-primary"/>
           {team.name} - Player Statistics
         </CardTitle>
-        <CardDescription>{isSubstitutionAllowed ? 'Substitution is allowed for this team.' : 'Substitutions are only allowed during timeouts or halftime.'}</CardDescription>
+        <CardDescription>{getSubDescription()}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -149,7 +176,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer,
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[150px] bg-muted/50 font-bold">Player</TableHead>
-                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center w-[180px]">Status</TableHead>
                 <TableHead className="text-center">Total Points</TableHead>
                 <TableHead className="text-center">Raid Points</TableHead>
                 <TableHead className="text-center">Bonus Points</TableHead>
@@ -165,7 +192,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer,
                   team={team}
                   onPlayerNameChange={onPlayerNameChange} 
                   onSubstitutePlayer={onSubstitutePlayer}
-                  isSubstitutionAllowed={isSubstitutionAllowed}
+                  isSubstitutionAllowed={canSubstitute}
                 />
               ))}
             </TableBody>

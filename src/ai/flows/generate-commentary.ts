@@ -12,20 +12,20 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateCommentaryInputSchema = z.object({
-  eventType: z.enum(['raid_score', 'tackle_score', 'super_tackle_score', 'empty_raid', 'line_out', 'do_or_die_fail']).describe("The type of event that occurred."),
-  raidingTeam: z.string().describe("The name of the raiding team."),
-  defendingTeam: z.string().describe("The name of the defending team."),
-  raiderName: z.string().describe("The name of the raider."),
+  eventType: z.enum(['raid_score', 'tackle_score', 'super_tackle_score', 'empty_raid', 'line_out', 'do_or_die_fail', 'green_card', 'yellow_card', 'red_card']).describe("The type of event that occurred."),
+  raidingTeam: z.string().describe("The name of the raiding team, or the team of the player who committed the foul."),
+  defendingTeam: z.string().describe("The name of the defending team, or the opposing team."),
+  raiderName: z.string().describe("The name of the raider, or the player who committed the foul."),
   defenderName: z.string().optional().describe("The name of the defender, if applicable."),
   points: z.number().describe("The number of points scored in the event."),
-  isSuperRaid: z.boolean().describe("Whether the raid was a super raid."),
-  isDoOrDie: z.boolean().describe("Whether the raid was a do-or-die raid."),
+  isSuperRaid: z.boolean().optional().describe("Whether the raid was a super raid."),
+  isDoOrDie: z.boolean().optional().describe("Whether the raid was a do-or-die raid."),
   isBonus: z.boolean().optional().describe("Whether a bonus point was scored."),
   isLona: z.boolean().optional().describe("Whether a Lona was scored."),
   commentaryHistory: z.array(z.string()).optional().describe('A brief history of the last few commentary snippets to maintain context.'),
   team1Score: z.number().describe("The score of team 1."),
   team2Score: z.number().describe("The score of team 2."),
-  raidCount: z.number().describe("The current consecutive empty raid count for the raiding team."),
+  raidCount: z.number().optional().describe("The current consecutive empty raid count for the raiding team."),
 });
 export type GenerateCommentaryInput = z.infer<typeof GenerateCommentaryInputSchema>;
 
@@ -45,7 +45,10 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert, high-energy Kabaddi commentator. Your job is to provide exciting, concise commentary for live match events. Keep it short and punchy, like a real-time update. Use the provided context to make your commentary more descriptive.
 
   Match Context:
+  - Current Score: {{team1Score}} - {{team2Score}}
+  {{#if raidCount}}
   - Current Empty Raids for {{raidingTeam}}: {{raidCount}}
+  {{/if}}
   - Last few commentary lines for context:
     {{#if commentaryHistory}}
     {{#each commentaryHistory}}
@@ -58,6 +61,13 @@ const prompt = ai.definePrompt({
   Now, generate the commentary for the following event:
 
   Event Type: {{eventType}}
+  {{#if (eq eventType "green_card")}}
+  A Green Card has been shown to {{raiderName}} of {{raidingTeam}}! That's a final warning for the player.
+  {{else if (eq eventType "yellow_card")}}
+  It's a Yellow Card for {{raiderName}} from {{raidingTeam}}! That's a technical point to {{defendingTeam}} and a two-minute suspension for the player. This could be costly!
+  {{else if (eq eventType "red_card")}}
+  RED CARD! {{raiderName}} of {{raidingTeam}} has been sent off for the rest of the match! A technical point is awarded to {{defendingTeam}}. A huge blow for {{raidingTeam}}!
+  {{else}}
   Raiding Team: {{raidingTeam}}
   Raider: {{raiderName}}
   Defending Team: {{defendingTeam}}
@@ -76,6 +86,7 @@ const prompt = ai.definePrompt({
   {{/if}}
   {{#if isLona}}
   This resulted in a LONA!
+  {{/if}}
   {{/if}}
 
   Based on all this information, generate a single, exciting commentary line.
