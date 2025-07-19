@@ -60,14 +60,17 @@ const prompt = ai.definePrompt({
 
   Now, generate the commentary for the following event:
 
-  Event Type: {{eventType}}
-  {{#if (eq eventType "green_card")}}
+  {{#if is_green_card}}
   A Green Card has been shown to {{raiderName}} of {{raidingTeam}}! That's a final warning for the player.
-  {{else if (eq eventType "yellow_card")}}
+  {{/if}}
+  {{#if is_yellow_card}}
   It's a Yellow Card for {{raiderName}} from {{raidingTeam}}! That's a technical point to {{defendingTeam}} and a two-minute suspension for the player. This could be costly!
-  {{else if (eq eventType "red_card")}}
+  {{/if}}
+  {{#if is_red_card}}
   RED CARD! {{raiderName}} of {{raidingTeam}} has been sent off for the rest of the match! A technical point is awarded to {{defendingTeam}}. A huge blow for {{raidingTeam}}!
-  {{else}}
+  {{/if}}
+  {{#if is_other_event}}
+  Event Type: {{eventType}}
   Raiding Team: {{raidingTeam}}
   Raider: {{raiderName}}
   Defending Team: {{defendingTeam}}
@@ -100,7 +103,15 @@ const generateCommentaryFlow = ai.defineFlow(
     outputSchema: GenerateCommentaryOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    // Add boolean flags for the template based on eventType
+    const processedInput = {
+      ...input,
+      is_green_card: input.eventType === 'green_card',
+      is_yellow_card: input.eventType === 'yellow_card',
+      is_red_card: input.eventType === 'red_card',
+      is_other_event: !['green_card', 'yellow_card', 'red_card'].includes(input.eventType),
+    };
+    const {output} = await prompt(processedInput);
     return output!;
   }
 );
