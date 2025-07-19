@@ -568,7 +568,7 @@ export default function Home() {
     const team = newTeams[teamIndex];
     const opposingTeamIndex = 1 - teamIndex;
     const opposingTeam = newTeams[opposingTeamIndex];
-    let commentaryCardType = cardType;
+    let commentaryCardType: string = cardType;
 
     if (cardType === 'green') {
         player.greenCards += 1;
