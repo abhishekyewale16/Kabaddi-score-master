@@ -58,22 +58,20 @@ export default function Home() {
   const addCommentary = useCallback(async (eventData: any) => {
     setIsCommentaryLoading(true);
     try {
-        const history = commentaryLog.slice(-3); // Keep last 3 for context
-        
+        const history = commentaryLog.slice(-3);
         const fullEventData = {
           ...eventData,
           commentaryHistory: history,
-        }
-
+        };
         const result = await generateCommentary(fullEventData);
-        if (result.commentary) {
+        if (result && result.commentary) {
             setCommentaryLog(prev => [result.commentary, ...prev]);
         }
     } catch (error) {
         console.error("Error generating commentary:", error);
         toast({
             title: "Commentary Error",
-            description: "The AI commentator is busy. Please try again in a moment.",
+            description: "The AI commentator is busy or unavailable. Please try again in a moment.",
             variant: "destructive",
         });
     } finally {
@@ -92,14 +90,12 @@ export default function Home() {
           if (prev.minutes > 0) {
             return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
           }
-          // Timer ends for the half
           if (prev.half === 1) {
              setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
           }
           return { ...prev, isRunning: false };
         });
 
-        // Decrement suspension timers
         setTeams(currentTeams => {
             let suspensionInProgress = false;
             const newTeams = currentTeams.map(team => ({
@@ -109,8 +105,7 @@ export default function Home() {
                         suspensionInProgress = true;
                         const newTimer = player.suspensionTimer - 1;
                         if (newTimer === 0) {
-                            // Suspension over, mark as playing if not red carded
-                            return { ...player, suspensionTimer: newTimer, isPlaying: !player.isRedCarded };
+                            return { ...player, suspensionTimer: 0, isPlaying: !player.isRedCarded };
                         }
                         return { ...player, suspensionTimer: newTimer };
                     }
@@ -118,7 +113,6 @@ export default function Home() {
                 })
             })) as [Team, Team];
             
-            // Only update state if a timer was actually decremented
             return suspensionInProgress ? newTeams : currentTeams;
         });
 
@@ -129,14 +123,12 @@ export default function Home() {
     };
   }, [timer.isRunning, timer.isTimeout]);
 
-  // Effect for showing toast on suspension end
   useEffect(() => {
     const prevTeams = prevTeamsRef.current;
-
     teams.forEach((team, teamIndex) => {
         team.players.forEach((player, playerIndex) => {
             const prevPlayer = prevTeams[teamIndex].players[playerIndex];
-            if (prevPlayer.suspensionTimer > 0 && player.suspensionTimer === 0) {
+            if (prevPlayer && prevPlayer.suspensionTimer > 0 && player.suspensionTimer === 0) {
                 toast({
                     title: "Suspension Over",
                     description: `${player.name} (${team.name}) is now eligible to play.`,
@@ -144,18 +136,16 @@ export default function Home() {
             }
         });
     });
-
-    prevTeamsRef.current = teams;
+    prevTeamsRef.current = JSON.parse(JSON.stringify(teams));
   }, [teams, toast]);
   
   const handleToggleTimer = useCallback(() => {
     const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
     const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
 
-    if (isSecondHalfOver) return; // Match is fully over
+    if (isSecondHalfOver) return; 
 
     if (timer.isTimeout) {
-      // Resume from timeout
       setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
       setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
       toast({
@@ -166,7 +156,6 @@ export default function Home() {
     }
 
     if (isFirstHalfOver) {
-      // Start the second half
       setTimer({
         minutes: matchDuration,
         seconds: 0,
@@ -174,12 +163,10 @@ export default function Home() {
         half: 2,
         isTimeout: false,
       });
-      // Reset timeouts for the second half and substitutions
       setTeams(prevTeams => prevTeams.map(t => ({...t, timeoutsRemaining: 2})) as [Team, Team]);
       setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
 
     } else {
-      // Toggle pause/play
       setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
     }
   }, [timer, matchDuration, toast]);
@@ -196,7 +183,6 @@ export default function Home() {
     setRaidingTeamId(1);
     setCommentaryLog([]);
     setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
-    // A deep copy is needed to reset players and timeouts
     const newInitialTeams = JSON.parse(JSON.stringify(initialTeams));
     newInitialTeams.forEach((team: Team) => team.timeoutsRemaining = 2);
     setTeams(newInitialTeams);
@@ -355,7 +341,7 @@ export default function Home() {
         const activeRaider = originalRaidingTeam?.players.find(p => p.isPlaying);
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
-    } else { // raid event
+    } else {
         raiderForCommentary = player?.name;
     }
 
@@ -542,7 +528,6 @@ export default function Home() {
 
     if (!playerIn || !playerOut) return;
     
-    // Additional check for red-carded players
     if (playerIn.isRedCarded || playerOut.isRedCarded) {
         toast({
             title: "Substitution Not Allowed",
@@ -591,23 +576,23 @@ export default function Home() {
 
     if (cardType === 'green') {
         player.greenCards += 1;
-        if(player.greenCards > 1) { // Second green card becomes a yellow
+        if(player.greenCards > 1) { 
             player.yellowCards += 1;
             opposingTeam.score += 1;
             player.suspensionTimer = 120;
             player.isPlaying = false;
-            commentaryCardType = 'yellow'; // Upgrade for commentary
+            commentaryCardType = 'yellow';
         }
     } else if (cardType === 'yellow') {
         player.yellowCards += 1;
         opposingTeam.score += 1;
-        if (player.yellowCards > 1) { // Second yellow becomes a red
+        if (player.yellowCards > 1) { 
             player.isRedCarded = true;
             player.isPlaying = false;
-            player.suspensionTimer = 0; // No timer, just out
-            commentaryCardType = 'red'; // Upgrade for commentary
+            player.suspensionTimer = 0; 
+            commentaryCardType = 'red';
         } else {
-            player.suspensionTimer = 120; // 2 minutes
+            player.suspensionTimer = 120;
             player.isPlaying = false;
         }
     } else if (cardType === 'red') {
@@ -618,10 +603,10 @@ export default function Home() {
 
     addCommentary({
         eventType: `${commentaryCardType}_card`,
-        raidingTeam: team.name, // Team of the player getting carded
+        raidingTeam: team.name, 
         defendingTeam: opposingTeam.name,
-        raiderName: player.name, // Player getting carded
-        points: 1, // Technical point
+        raiderName: player.name, 
+        points: 1, 
         team1Score: newTeams[0].score,
         team2Score: newTeams[1].score,
     });
