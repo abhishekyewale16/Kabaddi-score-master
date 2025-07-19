@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { initialTeams } from '@/lib/data';
-import type { Team } from '@/lib/types';
+import type { Team, Player } from '@/lib/types';
 import { Scoreboard } from '@/components/scoreboard';
 import { PlayerStatsTable } from '@/components/player-stats-table';
 import { ScoringControls } from '@/components/scoring-controls';
@@ -46,6 +46,7 @@ export default function Home() {
     half: 1 as 1 | 2,
     isTimeout: false,
   });
+  const prevTeamsRef = useRef<[Team, Team]>(teams);
 
   const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0);
   const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
@@ -108,10 +109,8 @@ export default function Home() {
                         suspensionInProgress = true;
                         const newTimer = player.suspensionTimer - 1;
                         if (newTimer === 0) {
-                             toast({
-                                title: "Suspension Over",
-                                description: `${player.name} (${team.name}) is now eligible to play.`,
-                            });
+                            // Suspension over, mark as playing if not red carded
+                            return { ...player, suspensionTimer: newTimer, isPlaying: !player.isRedCarded };
                         }
                         return { ...player, suspensionTimer: newTimer };
                     }
@@ -128,7 +127,26 @@ export default function Home() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timer.isRunning, timer.isTimeout, toast]);
+  }, [timer.isRunning, timer.isTimeout]);
+
+  // Effect for showing toast on suspension end
+  useEffect(() => {
+    const prevTeams = prevTeamsRef.current;
+
+    teams.forEach((team, teamIndex) => {
+        team.players.forEach((player, playerIndex) => {
+            const prevPlayer = prevTeams[teamIndex].players[playerIndex];
+            if (prevPlayer.suspensionTimer > 0 && player.suspensionTimer === 0) {
+                toast({
+                    title: "Suspension Over",
+                    description: `${player.name} (${team.name}) is now eligible to play.`,
+                });
+            }
+        });
+    });
+
+    prevTeamsRef.current = teams;
+  }, [teams, toast]);
   
   const handleToggleTimer = useCallback(() => {
     const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
@@ -334,7 +352,8 @@ export default function Home() {
         raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
-        raiderForCommentary = originalRaidingTeam?.players.find(p => p.isPlaying)?.name ?? 'Unknown Raider';
+        const activeRaider = originalRaidingTeam?.players.find(p => p.isPlaying);
+        raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else { // raid event
         raiderForCommentary = player?.name;
@@ -576,6 +595,7 @@ export default function Home() {
             player.yellowCards += 1;
             opposingTeam.score += 1;
             player.suspensionTimer = 120;
+            player.isPlaying = false;
             commentaryCardType = 'yellow'; // Upgrade for commentary
         }
     } else if (cardType === 'yellow') {
@@ -588,6 +608,7 @@ export default function Home() {
             commentaryCardType = 'red'; // Upgrade for commentary
         } else {
             player.suspensionTimer = 120; // 2 minutes
+            player.isPlaying = false;
         }
     } else if (cardType === 'red') {
         player.isRedCarded = true;
