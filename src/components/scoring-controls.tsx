@@ -115,6 +115,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const selectedPointType = form.watch('pointType');
   const isTackleEvent = selectedPointType === 'tackle' || selectedPointType === 'tackle-lona';
   const raidingTeam = teams.find(t => t.id === raidingTeamId);
+  const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isRedCarded && p.suspensionTimer === 0);
 
 
   // Set the correct teamId when the modal opens or raidingTeamId changes
@@ -218,7 +219,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const showPlayerSelection = true; 
   const playerSelectTeamId = selectedPointType === 'line-out' ? raidingTeamId : Number(form.watch('teamId'))
   const playerSelectTeam = teams.find(t => t.id === playerSelectTeamId);
-  const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying);
+  const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying && !p.isRedCarded && p.suspensionTimer === 0);
 
   return (
     <Card>
@@ -436,7 +437,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {raidingTeam?.players.filter(p => p.isPlaying).map(player => (
+                                            {eligibleRaidingPlayers?.map(player => (
                                                 <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                                             ))}
                                         </SelectContent>
