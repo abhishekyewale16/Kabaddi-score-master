@@ -34,7 +34,8 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldAlert } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/hooks/use-toast";
+import { Label } from '@/components/ui/label';
 
 interface FoulPlayProps {
   teams: [Team, Team];
@@ -43,9 +44,9 @@ interface FoulPlayProps {
 }
 
 const formSchema = z.object({
+  cardType: z.enum(['green', 'yellow', 'red'], { required_error: "You must select a card type." }),
   teamId: z.string().min(1, { message: 'Please select a team.' }),
   playerId: z.string().min(1, { message: "Player selection is required." }),
-  cardType: z.enum(['green', 'yellow', 'red'], { required_error: "You must select a card type." }),
 });
 
 export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) {
@@ -105,11 +106,51 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) 
             <DialogHeader>
               <DialogTitle>Issue a Disciplinary Card</DialogTitle>
               <DialogDescription>
-                Select the player and the card to issue for a rule violation.
+                Select the card type, team, and player to issue a violation.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="cardType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Card Type</FormLabel>
+                      <FormControl>
+                        <RadioGroup 
+                          onValueChange={field.onChange}
+                          value={field.value} 
+                          className="grid grid-cols-3 gap-2"
+                        >
+                          <FormItem>
+                             <RadioGroupItem value="green" id="green" className="peer sr-only" />
+                             <Label htmlFor="green" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                                <div className="w-8 h-12 bg-green-500 rounded-sm mb-2"></div>
+                                Green
+                             </Label>
+                          </FormItem>
+                          <FormItem>
+                             <RadioGroupItem value="yellow" id="yellow" className="peer sr-only" />
+                             <Label htmlFor="yellow" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                                <div className="w-8 h-12 bg-yellow-400 rounded-sm mb-2"></div>
+                                Yellow
+                             </Label>
+                          </FormItem>
+                          <FormItem>
+                             <RadioGroupItem value="red" id="red" className="peer sr-only" />
+                             <Label htmlFor="red" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                                <div className="w-8 h-12 bg-red-600 rounded-sm mb-2"></div>
+                                Red
+                             </Label>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="teamId"
@@ -154,46 +195,6 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) 
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="cardType"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Card Type</FormLabel>
-                      <FormControl>
-                        <RadioGroup 
-                          onValueChange={field.onChange}
-                          value={field.value} 
-                          className="grid grid-cols-3 gap-2"
-                        >
-                          <FormItem>
-                             <RadioGroupItem value="green" id="green" className="peer sr-only" />
-                             <Label htmlFor="green" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                                <div className="w-8 h-12 bg-green-500 rounded-sm mb-2"></div>
-                                Green
-                             </Label>
-                          </FormItem>
-                          <FormItem>
-                             <RadioGroupItem value="yellow" id="yellow" className="peer sr-only" />
-                             <Label htmlFor="yellow" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                                <div className="w-8 h-12 bg-yellow-400 rounded-sm mb-2"></div>
-                                Yellow
-                             </Label>
-                          </FormItem>
-                          <FormItem>
-                             <RadioGroupItem value="red" id="red" className="peer sr-only" />
-                             <Label htmlFor="red" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                                <div className="w-8 h-12 bg-red-600 rounded-sm mb-2"></div>
-                                Red
-                             </Label>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
