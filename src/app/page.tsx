@@ -71,7 +71,7 @@ export default function Home() {
         console.error("Error generating commentary:", error);
         toast({
             title: "Commentary Error",
-            description: "The AI commentator is busy or unavailable. Please try again in a moment.",
+            description: "The AI service is currently unavailable or has reached its quota. Please try again later.",
             variant: "destructive",
         });
     } finally {
