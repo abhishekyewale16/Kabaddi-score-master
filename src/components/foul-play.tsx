@@ -95,9 +95,6 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) 
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Issue a Disciplinary Card</DialogTitle>
-              <DialogDescription>
-                Select the card type, team, and player to issue a violation.
-              </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

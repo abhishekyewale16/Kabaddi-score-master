@@ -237,9 +237,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Register a Scoring Event</DialogTitle>
-              <DialogDescription>
-                Select the team, player, and type of point to award. The raid will switch automatically.
-              </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -415,9 +412,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Declare Empty Raid</DialogTitle>
-                    <DialogDescription>
-                        Select the player who performed the empty raid for the currently raiding team ({raidingTeam?.name}). This will switch the raid to the other team.
-                    </DialogDescription>
                 </DialogHeader>
                 <Form {...emptyRaidForm}>
                     <form onSubmit={emptyRaidForm.handleSubmit(onEmptyRaidSubmit)} className="space-y-4">
