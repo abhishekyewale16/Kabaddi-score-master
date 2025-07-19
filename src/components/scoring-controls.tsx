@@ -117,7 +117,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const raidingTeam = teams.find(t => t.id === raidingTeamId);
   const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isRedCarded && p.suspensionTimer === 0);
 
-
   // Set the correct teamId when the modal opens or raidingTeamId changes
   useEffect(() => {
     if(open) {
@@ -137,6 +136,23 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   }, [emptyRaidDialogOpen, emptyRaidForm]);
   
   const selectedTeam = teams.find(t => t.id === Number(form.watch('teamId')));
+  
+  // Effect to handle side-effects of changing pointType
+  useEffect(() => {
+    const isTackle = ['tackle', 'tackle-lona'].includes(selectedPointType);
+    const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+    
+    form.setValue('teamId', newTeamId);
+    form.setValue('playerId', ''); // Reset player when type changes
+    
+    // Reset points based on the new type
+    let defaultPoints = 1;
+    if (['lona-bonus-points'].includes(selectedPointType)) {
+      defaultPoints = 6;
+    }
+    form.setValue('points', defaultPoints);
+
+  }, [selectedPointType, raidingTeamId, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     let points = values.points;
@@ -174,27 +190,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     onEmptyRaid(raidingTeamId, Number(values.playerId));
     setEmptyRaidDialogOpen(false);
   }
-  
-  const handlePointTypeChange = (value: string) => {
-    form.setValue('pointType', value as z.infer<typeof formSchema>['pointType']);
-    form.setValue('playerId', ''); // Reset player when type changes
-    form.trigger('playerId'); // Manually trigger validation for playerId
-    const isTackle = ['tackle', 'tackle-lona'].includes(value);
-    
-    // Reset points based on the new type
-    let defaultPoints = 1;
-    if (['lona-bonus-points'].includes(value)) {
-        defaultPoints = 6;
-    }
-    if (['lona-points'].includes(value)) {
-      defaultPoints = 1;
-    }
-    form.setValue('points', defaultPoints);
-
-    const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
-    form.setValue('teamId', newTeamId);
-  }
-
 
   const getHelperText = () => {
     switch(selectedPointType) {
@@ -277,7 +272,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                       <FormLabel>Point Type</FormLabel>
                       <FormControl>
                         <RadioGroup 
-                          onValueChange={handlePointTypeChange} 
+                          onValueChange={field.onChange}
                           value={field.value} 
                           className="grid grid-cols-2 gap-2"
                         >
