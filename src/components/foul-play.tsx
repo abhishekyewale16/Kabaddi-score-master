@@ -32,8 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
 
@@ -88,16 +87,7 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) 
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-3">
-          <ShieldAlert className="text-destructive" />
-          Foul Play
-        </CardTitle>
-        <CardDescription>
-            Issue a Green, Yellow, or Red card to a player for violations.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
+      <CardContent className="p-6">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button variant="destructive" className="w-full" disabled={!isTimerRunning}>Issue Card</Button>
