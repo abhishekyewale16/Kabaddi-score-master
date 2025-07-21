@@ -358,12 +358,11 @@ export default function Home() {
         raiderForCommentary = player?.name;
     }
 
-    const commentaryData = {
+    const commentaryData: any = {
         eventType: eventType,
         raidingTeam: raidingTeamForCommentary.name,
         defendingTeam: defendingTeamForCommentary.name,
         raiderName: raiderForCommentary,
-        defenderName: defenderForCommentary,
         points: data.points,
         isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
         isDoOrDie: currentRaidCount === 2,
@@ -373,6 +372,10 @@ export default function Home() {
         team1Score,
         team2Score,
     };
+    
+    if (defenderForCommentary) {
+      commentaryData.defenderName = defenderForCommentary;
+    }
     
     addCommentary(commentaryData);
     setTeams(newTeams);
