@@ -252,7 +252,7 @@ export default function Home() {
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
     if (scoringTeamIndex === -1) return;
     
-    const defendingTeamId = isTackleEvent ? (newTeams[scoringTeamIndex].id === 1 ? 2 : 1) : (newTeams[scoringTeamIndex].id === 1 ? 2 : 1);
+    const defendingTeamId = data.teamId === 1 ? 2 : 1;
     const defendingTeamIndex = newTeams.findIndex(t => t.id === defendingTeamId);
 
     if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
@@ -368,7 +368,8 @@ export default function Home() {
         raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
-        const activeRaider = originalRaidingTeam?.players.find(p => p.isPlaying && !p.isOut);
+        const eliminatedPlayerId = data.eliminatedPlayerIds?.[0];
+        const activeRaider = originalRaidingTeam?.players.find(p => p.id === eliminatedPlayerId);
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else {
@@ -388,8 +389,10 @@ export default function Home() {
         raidCount: currentRaidCount,
         team1Score,
         team2Score,
-        defenderName: defenderForCommentary,
     };
+    if (defenderForCommentary) {
+      commentaryData.defenderName = defenderForCommentary;
+    }
     
     addCommentary(commentaryData);
     setTeams(newTeams);
@@ -853,3 +856,4 @@ export default function Home() {
     </>
   );
 }
+
