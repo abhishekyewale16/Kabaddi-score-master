@@ -71,8 +71,8 @@ export default function Home() {
     } catch (error) {
         console.error("Error generating commentary:", error);
         toast({
-            title: "Commentary Error",
-            description: "The AI service is currently unavailable or has reached its quota. Please try again later.",
+            title: "AI Commentator Busy",
+            description: "The AI service is currently overloaded or has reached its quota. Please try again later.",
             variant: "destructive",
         });
     } finally {
