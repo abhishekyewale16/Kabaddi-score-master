@@ -103,7 +103,6 @@ const generateCommentaryFlow = ai.defineFlow(
     outputSchema: GenerateCommentaryOutputSchema,
   },
   async (input) => {
-    // Add boolean flags for the template based on eventType
     const processedInput = {
       ...input,
       is_green_card: input.eventType === 'green_card',
@@ -111,7 +110,26 @@ const generateCommentaryFlow = ai.defineFlow(
       is_red_card: input.eventType === 'red_card',
       is_other_event: !['green_card', 'yellow_card', 'red_card'].includes(input.eventType),
     };
-    const {output} = await prompt(processedInput);
-    return output!;
+
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      try {
+        const {output} = await prompt(processedInput);
+        return output!;
+      } catch (error: any) {
+        attempts++;
+        if (error.message.includes('503') && attempts < maxAttempts) {
+          // Wait for a short period before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+        } else {
+          // If it's not a 503 error or we've run out of attempts, rethrow the error.
+          throw error;
+        }
+      }
+    }
+    // This line should not be reached, but is here for type safety.
+    throw new Error('Failed to generate commentary after multiple attempts.');
   }
 );
