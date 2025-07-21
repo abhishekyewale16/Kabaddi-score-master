@@ -60,11 +60,16 @@ export default function Home() {
     setIsCommentaryLoading(true);
     try {
         const history = commentaryLog.slice(-3);
-        const fullEventData = {
+        const commentaryInput: any = {
           ...eventData,
           commentaryHistory: history,
         };
-        const result = await generateCommentary(fullEventData);
+
+        if (eventData.defenderName) {
+            commentaryInput.defenderName = eventData.defenderName;
+        }
+
+        const result = await generateCommentary(commentaryInput);
         if (result && result.commentary) {
             setCommentaryLog(prev => [result.commentary, ...prev]);
         }
@@ -72,7 +77,7 @@ export default function Home() {
         console.error("Error generating commentary:", error);
         toast({
             title: "AI Commentator Busy",
-            description: "The AI service is currently overloaded or has reached its quota. Please try again later.",
+            description: "The AI service is currently overloaded. Please try again later.",
             variant: "destructive",
         });
     } finally {
@@ -245,13 +250,12 @@ export default function Home() {
 
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
     if (scoringTeamIndex === -1) return;
-    const opposingTeamIndex = 1 - scoringTeamIndex;
-
-    const teamToUpdateIndex = isTackleEvent ? scoringTeamIndex : opposingTeamIndex;
     
+    const defendingTeamIndex = isTackleEvent ? (data.teamId === 1 ? 0 : 1) : (data.teamId === 1 ? 1 : 0);
+
     // Handle eliminated players
     if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
-        newTeams[teamToUpdateIndex].players.forEach(player => {
+        newTeams[defendingTeamIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
                 player.isOut = true;
             }
@@ -259,15 +263,15 @@ export default function Home() {
     }
 
     // Check for Lona (All Out)
-    const activePlayersOnMat = newTeams[teamToUpdateIndex].players.filter(p => p.isPlaying).length;
-    const outPlayers = newTeams[teamToUpdateIndex].players.filter(p => p.isPlaying && p.isOut).length;
+    const activePlayersOnMat = newTeams[defendingTeamIndex].players.filter(p => p.isPlaying && !p.isRedCarded && p.suspensionTimer === 0).length;
+    const outPlayers = newTeams[defendingTeamIndex].players.filter(p => p.isOut).length;
     let isLona = false;
     if (activePlayersOnMat > 0 && activePlayersOnMat === outPlayers) {
         isLona = true;
         newTeams[scoringTeamIndex].score += 2; // Award Lona points
         
         // Revive all players of the "All Out" team
-        newTeams[teamToUpdateIndex].players.forEach(player => {
+        newTeams[defendingTeamIndex].players.forEach(player => {
             player.isOut = false;
         });
 
@@ -278,6 +282,7 @@ export default function Home() {
     }
 
     if (data.pointType === 'line-out') {
+        const opposingTeamIndex = 1 - scoringTeamIndex;
         newTeams[opposingTeamIndex].score += data.points;
     } else {
         let teamScoreIncrement = 0;
