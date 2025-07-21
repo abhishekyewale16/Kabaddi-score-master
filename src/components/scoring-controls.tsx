@@ -69,6 +69,14 @@ const formSchema = z.object({
 }, {
     message: "Number of points must match the number of eliminated players.",
     path: ["points"],
+}).refine(data => {
+    if (data.pointType === 'tackle') {
+        return data.eliminatedPlayerIds?.length === 1;
+    }
+    return true;
+}, {
+    message: "You must select exactly one raider who was tackled.",
+    path: ["eliminatedPlayerIds"],
 });
 
 
@@ -163,7 +171,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         form.setValue('points', superTackleIsOn ? 2 : 1);
       }
     }
-  }, [open, teams, raidingTeamId, form]);
+  }, [open, teams, raidingTeamId, form, handlePointTypeChange]);
 
   useEffect(() => {
     if (!emptyRaidDialogOpen) {
@@ -202,9 +210,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const isTackleEvent = selectedPointType === 'tackle';
   const scoringTeamId = Number(form.watch('teamId'));
-  const defendingTeamId = isTackleEvent ? scoringTeamId === 1 ? 2 : 1 : raidingTeamId === 1 ? 2 : 1
+  const teamToEliminateId = isTackleEvent ? (scoringTeamId === 1 ? 2 : 1) : (scoringTeamId === 1 ? 2 : 1);
   const playerSelectTeam = teams.find(t => t.id === scoringTeamId);
-  const eliminatedPlayerTeam = teams.find(t => t.id === defendingTeamId);
+  const eliminatedPlayerTeam = teams.find(t => t.id === teamToEliminateId);
   const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   const availableToEliminatePlayers = eliminatedPlayerTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus'].includes(selectedPointType);
@@ -297,7 +305,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                   )}
                 />
 
-                {showEliminatedPlayerSelection && (
+                {showEliminatedPlayerSelection && !isTackleEvent && (
                     <FormField
                         control={form.control}
                         name="eliminatedPlayerIds"
@@ -332,6 +340,35 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                         />
                                     ))}
                                 </div>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+
+                {isTackleEvent && (
+                    <FormField
+                        control={form.control}
+                        name="eliminatedPlayerIds"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Eliminated Raider ({eliminatedPlayerTeam?.name})</FormLabel>
+                                <Select 
+                                    onValueChange={(value) => field.onChange(value ? [Number(value)] : [])} 
+                                    value={String(field.value?.[0] ?? '')} 
+                                    disabled={!eliminatedPlayerTeam}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select the raider" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {availableToEliminatePlayers?.map(player => (
+                                            <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
