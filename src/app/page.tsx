@@ -235,7 +235,7 @@ export default function Home() {
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number, eliminatedPlayerIds?: number[] }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-    const isRaidEvent = !['tackle', 'tackle-lona', 'line-out'].includes(data.pointType);
+    const isRaidEvent = !['tackle', 'line-out'].includes(data.pointType);
     const isTackleEvent = data.pointType.includes('tackle');
 
     if (isRaidEvent) {
@@ -245,13 +245,12 @@ export default function Home() {
 
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
     if (scoringTeamIndex === -1) return;
-
     const opposingTeamIndex = 1 - scoringTeamIndex;
-    const isLona = data.pointType.includes('lona');
 
+    const teamToUpdateIndex = isTackleEvent ? scoringTeamIndex : opposingTeamIndex;
+    
     // Handle eliminated players
     if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
-        const teamToUpdateIndex = isTackleEvent ? scoringTeamIndex : opposingTeamIndex;
         newTeams[teamToUpdateIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
                 player.isOut = true;
@@ -259,32 +258,33 @@ export default function Home() {
         });
     }
 
-    // Handle revival on Lona
-    if (isLona) {
-        const teamToReviveIndex = isTackleEvent ? scoringTeamIndex : opposingTeamIndex;
-        newTeams[teamToReviveIndex].players.forEach(player => {
+    // Check for Lona (All Out)
+    const activePlayersOnMat = newTeams[teamToUpdateIndex].players.filter(p => p.isPlaying).length;
+    const outPlayers = newTeams[teamToUpdateIndex].players.filter(p => p.isPlaying && p.isOut).length;
+    let isLona = false;
+    if (activePlayersOnMat > 0 && activePlayersOnMat === outPlayers) {
+        isLona = true;
+        newTeams[scoringTeamIndex].score += 2; // Award Lona points
+        
+        // Revive all players of the "All Out" team
+        newTeams[teamToUpdateIndex].players.forEach(player => {
             player.isOut = false;
         });
-        // Also revive all players of the scoring team
-        newTeams[scoringTeamIndex].players.forEach(player => {
-            player.isOut = false;
+
+        toast({
+            title: "LONA! ALL OUT!",
+            description: `${newTeams[scoringTeamIndex].name} get 2 extra points for an All Out!`,
         });
     }
-    
+
     if (data.pointType === 'line-out') {
         newTeams[opposingTeamIndex].score += data.points;
     } else {
         let teamScoreIncrement = 0;
-        if (data.pointType === 'lona-points') {
-            teamScoreIncrement = data.points + 2;
-        } else if (data.pointType === 'bonus') {
+        if (data.pointType === 'bonus') {
             teamScoreIncrement = 1;
         } else if (data.pointType === 'raid-bonus') {
             teamScoreIncrement = data.points + 1;
-        } else if (data.pointType === 'lona-bonus-points') {
-            teamScoreIncrement = data.points + 1 + 2;
-        } else if (data.pointType === 'tackle-lona') {
-            teamScoreIncrement = data.points + 2;
         } else {
             teamScoreIncrement = data.points;
         }
@@ -295,7 +295,7 @@ export default function Home() {
             if (playerIndex !== -1) {
                 const player = newTeams[scoringTeamIndex].players[playerIndex];
                 let playerPointIncrement = 0;
-                const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+                const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus');
 
                 if (isSuccessfulRaid) {
                     player.totalRaids += 1;
@@ -310,7 +310,6 @@ export default function Home() {
 
                 switch (data.pointType) {
                     case 'raid':
-                    case 'lona-points':
                         player.raidPoints += data.points;
                         playerPointIncrement = data.points;
                         break;
@@ -319,13 +318,7 @@ export default function Home() {
                         player.bonusPoints += 1;
                         playerPointIncrement = data.points + 1;
                         break;
-                    case 'lona-bonus-points':
-                        player.raidPoints += data.points;
-                        player.bonusPoints += 1;
-                        playerPointIncrement = data.points + 1;
-                        break;
                     case 'tackle':
-                    case 'tackle-lona':
                         player.tacklePoints += data.points;
                         if (data.points === 2) {
                             player.superTacklePoints += 1;
@@ -352,8 +345,8 @@ export default function Home() {
     const raidingTeamForCommentary = isTackleEvent ? defendingTeam : scoringTeam;
     const defendingTeamForCommentary = isTackleEvent ? scoringTeam : defendingTeam; 
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
-    const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
-    const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+    const totalPointsInRaid = data.points + (['raid-bonus', 'bonus'].includes(data.pointType) ? 1 : 0);
+    const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus');
 
     let eventType: string;
     if (isTackleEvent) {
@@ -387,7 +380,7 @@ export default function Home() {
         points: data.points,
         isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
         isDoOrDie: currentRaidCount === 2,
-        isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
+        isBonus: ['raid-bonus', 'bonus'].includes(data.pointType),
         isLona: isLona,
         raidCount: currentRaidCount,
         team1Score,
@@ -403,7 +396,7 @@ export default function Home() {
     if (!isTackleEvent) {
         switchRaidingTeam();
     }
-}, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId]);
+}, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId, toast]);
 
 
   const handleEmptyRaid = useCallback((teamId: number, playerId: number) => {
@@ -812,7 +805,6 @@ export default function Home() {
         <div className="container mx-auto p-4 md:p-8">
           <header className="text-center mb-8">
             <h1 className="text-2xl font-headline font-bold text-primary">Kabaddi Score Master</h1>
-            <p className="text-sm text-muted-foreground">The ultimate tool for managing Kabaddi matches.</p>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -864,7 +856,3 @@ export default function Home() {
     </>
   );
 }
-
-    
-
-    

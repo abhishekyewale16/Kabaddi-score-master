@@ -49,7 +49,7 @@ interface ScoringControlsProps {
 
 const formSchema = z.object({
   teamId: z.string().min(1, { message: 'Please select a team.' }),
-  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona', 'line-out']),
+  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'line-out']),
   points: z.coerce.number().min(0, { message: 'Points must be positive.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
   eliminatedPlayerIds: z.array(z.number()).optional(),
@@ -62,7 +62,7 @@ const formSchema = z.object({
   message: "Player selection is required for this point type.",
   path: ["playerId"],
 }).refine(data => {
-    if (['raid', 'raid-bonus', 'lona-points', 'lona-bonus-points'].includes(data.pointType)) {
+    if (['raid', 'raid-bonus'].includes(data.pointType)) {
         return data.points === data.eliminatedPlayerIds?.length;
     }
     return true;
@@ -104,8 +104,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const raidingTeam = teams.find(t => t.id === raidingTeamId);
   const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
 
-  const handlePointTypeChange = (newPointType: 'raid' | 'tackle' | 'bonus' | 'raid-bonus' | 'lona-points' | 'lona-bonus-points' | 'tackle-lona' | 'line-out') => {
-    const isTackle = ['tackle', 'tackle-lona'].includes(newPointType);
+  const handlePointTypeChange = (newPointType: z.infer<typeof formSchema>['pointType']) => {
+    form.setValue('pointType', newPointType);
+    const isTackle = newPointType === 'tackle';
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
     let defaultPoints = 0;
@@ -124,7 +125,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
         if (name === 'eliminatedPlayerIds') {
-            const pointTypesToUpdate = ['raid', 'raid-bonus', 'lona-points', 'lona-bonus-points'];
+            const pointTypesToUpdate = ['raid', 'raid-bonus'];
             if (pointTypesToUpdate.includes(value.pointType as string)) {
                 form.setValue('points', value.eliminatedPlayerIds?.length ?? 0);
             }
@@ -136,7 +137,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
   useEffect(() => {
     if(open) {
-      handlePointTypeChange(form.getValues('pointType') as any);
+      handlePointTypeChange(form.getValues('pointType'));
     }
   }, [raidingTeamId, open]);
 
@@ -175,14 +176,14 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     setEmptyRaidDialogOpen(false);
   }
   
-  const isTackleEvent = selectedPointType === 'tackle' || selectedPointType === 'tackle-lona';
+  const isTackleEvent = selectedPointType === 'tackle';
   const scoringTeamId = Number(form.watch('teamId'));
   const defendingTeamId = isTackleEvent ? scoringTeamId : (scoringTeamId === 1 ? 2 : 1);
   const playerSelectTeam = teams.find(t => t.id === scoringTeamId);
   const eliminatedPlayerTeam = teams.find(t => t.id === defendingTeamId);
   const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   const availableToEliminatePlayers = eliminatedPlayerTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
-  const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus', 'tackle-lona', 'lona-points', 'lona-bonus-points'].includes(selectedPointType);
+  const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus'].includes(selectedPointType);
 
   return (
     <Card>
@@ -230,18 +231,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="bonus" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus Only</FormLabel>
-                          </FormItem>
-                           <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="lona-bonus-points" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona+Bonus+Pts</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="lona-points" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona + Raid Pts</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="tackle-lona" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Tackle + Lona</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="line-out" /></FormControl>
@@ -316,7 +305,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     />
                 )}
                 
-                 {(selectedPointType === 'raid' || selectedPointType === 'raid-bonus' || selectedPointType === 'lona-points' || selectedPointType === 'lona-bonus-points' || selectedPointType === 'line-out') && (
+                 {(selectedPointType === 'raid' || selectedPointType === 'raid-bonus' || selectedPointType === 'line-out') && (
                   <FormField
                     control={form.control}
                     name="points"
