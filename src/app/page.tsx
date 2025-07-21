@@ -98,12 +98,10 @@ export default function Home() {
         });
 
         setTeams(currentTeams => {
-            let suspensionInProgress = false;
             const newTeams = currentTeams.map(team => ({
                 ...team,
                 players: team.players.map(player => {
                     if (player.suspensionTimer > 0) {
-                        suspensionInProgress = true;
                         const newTimer = player.suspensionTimer - 1;
                         if (newTimer === 0) {
                             return { ...player, suspensionTimer: 0, isPlaying: !player.isRedCarded };
@@ -114,7 +112,7 @@ export default function Home() {
                 })
             })) as [Team, Team];
             
-            return suspensionInProgress ? newTeams : currentTeams;
+            return newTeams;
         });
 
       }, 1000);
@@ -866,5 +864,7 @@ export default function Home() {
     </>
   );
 }
+
+    
 
     
