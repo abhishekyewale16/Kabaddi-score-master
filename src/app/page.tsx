@@ -393,9 +393,7 @@ export default function Home() {
     
     addCommentary(commentaryData);
     setTeams(newTeams);
-    if (!isTackleEvent) {
-        switchRaidingTeam();
-    }
+    switchRaidingTeam();
 }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId, toast]);
 
 
