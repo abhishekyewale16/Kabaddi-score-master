@@ -11,6 +11,7 @@ export interface Player {
   superRaids: number;
   superTacklePoints: number;
   isPlaying: boolean;
+  isOut: boolean; // true if player is temporarily out of the match
   greenCards: number;
   yellowCards: number;
   isRedCarded: boolean;

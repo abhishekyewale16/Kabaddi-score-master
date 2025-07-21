@@ -77,12 +77,15 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
         const seconds = player.suspensionTimer % 60;
         return <Badge variant="secondary" className="flex items-center gap-1.5 bg-yellow-400 text-black hover:bg-yellow-400/80"><AlertCircle className="w-3 h-3"/>Suspended ({minutes}:{seconds.toString().padStart(2, '0')})</Badge>;
     }
+    if (player.isOut) {
+        return <Badge variant="secondary">Out</Badge>
+    }
     return player.isPlaying ? "Active" : "Bench";
   }
 
   return (
-    <TableRow className={cn(!player.isPlaying && "opacity-60", player.isRedCarded && "bg-destructive/20 opacity-40", player.suspensionTimer > 0 && "bg-yellow-400/20")}>
-      <TableCell className={cn("font-medium", player.isPlaying && !player.isRedCarded && player.suspensionTimer === 0 && "bg-destructive/10")}>
+    <TableRow className={cn(!player.isPlaying && "opacity-60", player.isOut && "opacity-50 bg-muted/50", player.isRedCarded && "bg-destructive/20 opacity-40", player.suspensionTimer > 0 && "bg-yellow-400/20")}>
+      <TableCell className={cn("font-medium", player.isPlaying && !player.isOut && !player.isRedCarded && player.suspensionTimer === 0 && "bg-destructive/10")}>
         <Input
           type="text"
           value={name}

@@ -235,7 +235,7 @@ export default function Home() {
     }
   }, [timer.isRunning, isMatchPristine]);
   
-  const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
+  const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number, eliminatedPlayerIds?: number[] }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const isRaidEvent = !['tackle', 'tackle-lona', 'line-out'].includes(data.pointType);
     const isTackleEvent = data.pointType.includes('tackle');
@@ -249,6 +249,29 @@ export default function Home() {
     if (scoringTeamIndex === -1) return;
 
     const opposingTeamIndex = 1 - scoringTeamIndex;
+    const isLona = data.pointType.includes('lona');
+
+    // Handle eliminated players
+    if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
+        const teamToUpdateIndex = isTackleEvent ? scoringTeamIndex : opposingTeamIndex;
+        newTeams[teamToUpdateIndex].players.forEach(player => {
+            if (data.eliminatedPlayerIds!.includes(player.id)) {
+                player.isOut = true;
+            }
+        });
+    }
+
+    // Handle revival on Lona
+    if (isLona) {
+        const teamToReviveIndex = isTackleEvent ? scoringTeamIndex : opposingTeamIndex;
+        newTeams[teamToReviveIndex].players.forEach(player => {
+            player.isOut = false;
+        });
+        // Also revive all players of the scoring team
+        newTeams[scoringTeamIndex].players.forEach(player => {
+            player.isOut = false;
+        });
+    }
     
     if (data.pointType === 'line-out') {
         newTeams[opposingTeamIndex].score += data.points;
@@ -351,7 +374,7 @@ export default function Home() {
         raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
-        const activeRaider = originalRaidingTeam?.players.find(p => p.isPlaying);
+        const activeRaider = originalRaidingTeam?.players.find(p => p.isPlaying && !p.isOut);
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else {
@@ -367,7 +390,7 @@ export default function Home() {
         isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
         isDoOrDie: currentRaidCount === 2,
         isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
-        isLona: data.pointType.includes('lona'),
+        isLona: isLona,
         raidCount: currentRaidCount,
         team1Score,
         team2Score,
@@ -419,6 +442,11 @@ export default function Home() {
         team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
       ) as [Team, Team];
       
+      // Mark raider as out
+      const raidingTeamIndex = newTeamsWithScore.findIndex(t => t.id === teamId)!;
+      const playerIndex = newTeamsWithScore[raidingTeamIndex].players.findIndex(p => p.id === playerId)!;
+      newTeamsWithScore[raidingTeamIndex].players[playerIndex].isOut = true;
+
       finalTeam1Score = newTeamsWithScore.find(t => t.id === 1)!.score;
       finalTeam2Score = newTeamsWithScore.find(t => t.id === 2)!.score;
 
@@ -690,7 +718,7 @@ export default function Home() {
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
-            "Status": p.isRedCarded ? 'Red Card' : p.suspensionTimer > 0 ? `Suspended (${p.suspensionTimer}s)` : p.isPlaying ? 'Active' : 'Substitute',
+            "Status": p.isRedCarded ? 'Red Card' : p.suspensionTimer > 0 ? `Suspended (${p.suspensionTimer}s)` : p.isOut ? 'Out' : p.isPlaying ? 'Active' : 'Bench',
             "Total Points": p.totalPoints,
             "Raid Points": p.raidPoints,
             "Bonus Points": p.bonusPoints,
