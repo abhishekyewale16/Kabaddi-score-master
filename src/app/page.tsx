@@ -61,14 +61,15 @@ export default function Home() {
     try {
         const history = commentaryLog.slice(-3);
         const commentaryInput: any = {
-          ...eventData,
           commentaryHistory: history,
         };
 
-        if (eventData.defenderName) {
-            commentaryInput.defenderName = eventData.defenderName;
+        for (const key in eventData) {
+            if (eventData[key] !== undefined && eventData[key] !== null) {
+                commentaryInput[key] = eventData[key];
+            }
         }
-
+        
         const result = await generateCommentary(commentaryInput);
         if (result && result.commentary) {
             setCommentaryLog(prev => [result.commentary, ...prev]);
@@ -251,9 +252,9 @@ export default function Home() {
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
     if (scoringTeamIndex === -1) return;
     
-    const defendingTeamIndex = isTackleEvent ? (data.teamId === 1 ? 0 : 1) : (data.teamId === 1 ? 1 : 0);
+    const defendingTeamId = isTackleEvent ? (newTeams[scoringTeamIndex].id === 1 ? 2 : 1) : (newTeams[scoringTeamIndex].id === 1 ? 2 : 1);
+    const defendingTeamIndex = newTeams.findIndex(t => t.id === defendingTeamId);
 
-    // Handle eliminated players
     if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
         newTeams[defendingTeamIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
@@ -262,15 +263,12 @@ export default function Home() {
         });
     }
 
-    // Check for Lona (All Out)
-    const activePlayersOnMat = newTeams[defendingTeamIndex].players.filter(p => p.isPlaying && !p.isRedCarded && p.suspensionTimer === 0).length;
-    const outPlayers = newTeams[defendingTeamIndex].players.filter(p => p.isOut).length;
+    const activePlayersOnMat = newTeams[defendingTeamIndex].players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length;
     let isLona = false;
-    if (activePlayersOnMat > 0 && activePlayersOnMat === outPlayers) {
+    if (activePlayersOnMat === 0) {
         isLona = true;
-        newTeams[scoringTeamIndex].score += 2; // Award Lona points
+        newTeams[scoringTeamIndex].score += 2;
         
-        // Revive all players of the "All Out" team
         newTeams[defendingTeamIndex].players.forEach(player => {
             player.isOut = false;
         });
@@ -390,11 +388,8 @@ export default function Home() {
         raidCount: currentRaidCount,
         team1Score,
         team2Score,
+        defenderName: defenderForCommentary,
     };
-    
-    if (defenderForCommentary) {
-      commentaryData.defenderName = defenderForCommentary;
-    }
     
     addCommentary(commentaryData);
     setTeams(newTeams);
@@ -438,7 +433,6 @@ export default function Home() {
         team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
       ) as [Team, Team];
       
-      // Mark raider as out
       const raidingTeamIndex = newTeamsWithScore.findIndex(t => t.id === teamId)!;
       const playerIndex = newTeamsWithScore[raidingTeamIndex].players.findIndex(p => p.id === playerId)!;
       newTeamsWithScore[raidingTeamIndex].players[playerIndex].isOut = true;
