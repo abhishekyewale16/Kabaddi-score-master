@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { initialTeams } from '@/lib/data';
-import type { Team, Player } from '@/lib/types';
+import type { Team, Player, MatchEvent } from '@/lib/types';
 import { Scoreboard } from '@/components/scoreboard';
 import { PlayerStatsTable } from '@/components/player-stats-table';
 import { ScoringControls } from '@/components/scoring-controls';
@@ -39,6 +39,7 @@ export default function Home() {
   const [isCommentaryLoading, setIsCommentaryLoading] = useState(false);
   const [matchDuration, setMatchDuration] = useState(INITIAL_MATCH_DURATION);
   const [substitutionsMadeThisBreak, setSubstitutionsMadeThisBreak] = useState<SubstitutionState>({ team1: 0, team2: 0 });
+  const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
   const [timer, setTimer] = useState({
     minutes: INITIAL_MATCH_DURATION,
     seconds: 0,
@@ -183,6 +184,7 @@ export default function Home() {
     setRaidingTeamId(1);
     setCommentaryLog([]);
     setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
+    setMatchEvents([]);
     const newInitialTeams = JSON.parse(JSON.stringify(initialTeams));
     newInitialTeams.forEach((team: Team) => team.timeoutsRemaining = 2);
     setTeams(newInitialTeams);
@@ -195,7 +197,8 @@ export default function Home() {
         return;
     }
 
-    setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
+    const newTimerState = { ...timer, isRunning: false, isTimeout: true };
+    setTimer(newTimerState);
     setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
     
     let teamName = '';
@@ -206,13 +209,23 @@ export default function Home() {
         teamName = newTeams[teamIndex].name;
     }
 
+    const timeString = `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`;
+    const timeoutEvent: MatchEvent = {
+        type: 'Timeout',
+        teamName: teamName,
+        half: timer.half,
+        time: timeString,
+        details: `Timeout taken by ${teamName}`
+    };
+    setMatchEvents(prev => [...prev, timeoutEvent]);
+
     setTeams(newTeams);
     toast({
         title: "Timeout Called",
         description: `${teamName} has called a timeout.`,
     });
 
-}, [teams, timer.isRunning, timer.isTimeout, toast]);
+}, [teams, timer, toast]);
 
   const handleMatchDurationChange = useCallback((newDuration: number) => {
     const duration = isNaN(newDuration) || newDuration < 1 ? 1 : newDuration;
@@ -551,12 +564,25 @@ export default function Home() {
       [teamKey]: prev[teamKey] + 1,
     }));
 
+    const timeString = `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`;
+    const context = timer.isTimeout ? `Timeout` : `Halftime`;
+
+    const subEvent: MatchEvent = {
+        type: 'Substitution',
+        teamName: team.name,
+        half: timer.half,
+        time: timeString,
+        details: `${playerIn.name} IN for ${playerOut.name} (Context: ${context})`
+    };
+    setMatchEvents(prev => [...prev, subEvent]);
+
+
     toast({
       title: "Substitution Successful",
       description: `${playerIn.name} has been substituted in for ${playerOut.name}.`,
     });
 
-  }, [teams, isSubstitutionPeriod, substitutionsMadeThisBreak, toast]);
+  }, [teams, isSubstitutionPeriod, substitutionsMadeThisBreak, toast, timer]);
 
   const handleIssueCard = useCallback((data: { teamId: number; playerId: number; cardType: 'green' | 'yellow' | 'red' }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
@@ -618,10 +644,7 @@ export default function Home() {
     const wb = XLSX.utils.book_new();
     const [team1, team2] = teams;
 
-    const headerStyle = { font: { bold: true, color: { rgb: "FFFFFFFF" } }, fill: { fgColor: { rgb: "FFD32F2F" } }, alignment: { horizontal: "center", vertical: "center" } };
-    const centeredStyle = { alignment: { horizontal: "center", vertical: "center" } };
-    const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
-
+    // --- Match Summary Sheet ---
     const summaryData = [
       [`${team1.name} vs ${team2.name} - Match Summary`],
       [],
@@ -645,6 +668,22 @@ export default function Home() {
     wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsSummary, "Match Summary");
 
+    // --- Timeline & Events Sheet ---
+    if (matchEvents.length > 0) {
+        const eventsHeader = ["Event Type", "Team", "Half", "Time", "Details"];
+        const eventsData = matchEvents.map(event => [
+            event.type,
+            event.teamName,
+            event.half,
+            event.time,
+            event.details
+        ]);
+        const wsEvents = XLSX.utils.aoa_to_sheet([eventsHeader, ...eventsData]);
+        wsEvents['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 8 }, { wch: 10 }, { wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, wsEvents, "Timeline & Events");
+    }
+
+    // --- Individual Team Sheets ---
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
@@ -682,7 +721,7 @@ export default function Home() {
         for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: 4, c: C });
             if (ws[cellAddress]) {
-                ws[cellAddress].s = headerStyle;
+                ws[cellAddress].s = { font: { bold: true, color: { rgb: "FFFFFFFF" } }, fill: { fgColor: { rgb: "FF452A7A" } } };
             }
         }
         
@@ -692,10 +731,8 @@ export default function Home() {
                 const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                 if (!ws[cellAddress]) continue;
                 
-                ws[cellAddress].s = { ...ws[cellAddress].s, border };
-                
-                if (typeof ws[cellAddress].v === 'number' || (C > 0 && ws[cellAddress].v === 'Active') || (C > 0 && ws[cellAddress].v === 'Substitute')) {
-                    ws[cellAddress].s = { ...ws[cellAddress].s, ...centeredStyle };
+                if (typeof ws[cellAddress].v === 'number') {
+                    ws[cellAddress].s = { alignment: { horizontal: "center" } };
                 }
             }
         }
@@ -713,7 +750,7 @@ export default function Home() {
     
     const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;
     XLSX.writeFile(wb, matchFileName);
-  }, [teams]);
+  }, [teams, matchEvents]);
 
   const handleExportCommentary = useCallback(() => {
     const doc = new Document({
@@ -798,3 +835,5 @@ export default function Home() {
     </>
   );
 }
+
+    

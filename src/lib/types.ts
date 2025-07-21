@@ -26,3 +26,13 @@ export interface Team {
   players: Player[];
   timeoutsRemaining: number;
 }
+
+export interface MatchEvent {
+  type: 'Timeout' | 'Substitution';
+  teamName: string;
+  half: 1 | 2;
+  time: string; // e.g., "15:30"
+  details: string;
+}
+
+    
