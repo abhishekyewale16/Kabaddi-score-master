@@ -33,7 +33,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare, UserMinus, Ban, Replace } from 'lucide-react';
+import { ClipboardPlus, Star, Shield, Swords, PlusSquare, UserMinus, Ban, Replace } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
@@ -80,6 +80,7 @@ const emptyRaidSchema = z.object({
 export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam, isTimerRunning }: ScoringControlsProps) {
   const [open, setOpen] = useState(false);
   const [emptyRaidDialogOpen, setEmptyRaidDialogOpen] = useState(false);
+  const [isBonusAvailable, setIsBonusAvailable] = useState(false);
   const { toast } = useToast()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -137,9 +138,21 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
   useEffect(() => {
     if(open) {
-      handlePointTypeChange(form.getValues('pointType'));
+      const defendingTeam = teams.find(t => t.id !== raidingTeamId);
+      const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
+      const bonusIsOn = activeDefenders >= 6;
+      setIsBonusAvailable(bonusIsOn);
+      
+      const currentPointType = form.getValues('pointType');
+      const isBonusType = ['bonus', 'raid-bonus'].includes(currentPointType);
+      
+      if (!bonusIsOn && isBonusType) {
+        handlePointTypeChange('raid');
+      } else {
+        form.setValue('teamId', String(raidingTeamId));
+      }
     }
-  }, [raidingTeamId, open]);
+  }, [open, teams, raidingTeamId, form]);
 
   useEffect(() => {
     if (!emptyRaidDialogOpen) {
@@ -178,7 +191,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const isTackleEvent = selectedPointType === 'tackle';
   const scoringTeamId = Number(form.watch('teamId'));
-  const defendingTeamId = isTackleEvent ? scoringTeamId : (scoringTeamId === 1 ? 2 : 1);
+  const defendingTeamId = isTackleEvent ? scoringTeamId === 1 ? 2 : 1 : raidingTeamId === 1 ? 2 : 1
   const playerSelectTeam = teams.find(t => t.id === scoringTeamId);
   const eliminatedPlayerTeam = teams.find(t => t.id === defendingTeamId);
   const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
@@ -194,7 +207,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) form.reset({ teamId: String(raidingTeamId), pointType: 'raid', points: 0, playerId: '', eliminatedPlayerIds: [] });
+        }}>
           <DialogTrigger asChild>
             <Button className="w-full" disabled={!isTimerRunning}>Add Score Event</Button>
           </DialogTrigger>
@@ -224,14 +240,18 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                             <FormControl><RadioGroupItem value="tackle" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Shield className="w-4 h-4" /> Tackle</FormLabel>
                           </FormItem>
-                           <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="raid-bonus" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><PlusSquare className="w-4 h-4" /> Raid + Bonus</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="bonus" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus Only</FormLabel>
-                          </FormItem>
+                           {isBonusAvailable && (
+                            <>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="raid-bonus" /></FormControl>
+                                <FormLabel className="font-normal flex items-center gap-2"><PlusSquare className="w-4 h-4" /> Raid + Bonus</FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl><RadioGroupItem value="bonus" /></FormControl>
+                                <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus Only</FormLabel>
+                              </FormItem>
+                            </>
+                           )}
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="line-out" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><UserMinus className="w-4 h-4" /> Line Out</FormLabel>
@@ -272,7 +292,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                         name="eliminatedPlayerIds"
                         render={() => (
                             <FormItem>
-                                <FormLabel>Eliminated Players ({eliminatedPlayerTeam?.name})</FormLabel>
+                                <div className="flex justify-between items-center">
+                                  <FormLabel>Eliminated Players ({eliminatedPlayerTeam?.name})</FormLabel>
+                                </div>
                                 <div className="space-y-2 rounded-md border p-2 h-32 overflow-y-auto">
                                     {availableToEliminatePlayers?.map((player) => (
                                         <FormField
@@ -354,6 +376,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
 
                 <DialogFooter>
+                   <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
                   <Button type="submit">Add Points</Button>
                 </DialogFooter>
               </form>
