@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, useForm as useEmptyRaidForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -114,14 +114,17 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const raidingTeam = teams.find(t => t.id === raidingTeamId);
   const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
 
-  const handlePointTypeChange = (newPointType: z.infer<typeof formSchema>['pointType']) => {
-    form.setValue('pointType', newPointType);
+  const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
+    const defendingTeam = teams.find(t => t.id !== (isTackle ? Number(newTeamId) : raidingTeamId));
+    const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
+    const superTackleIsOn = activeDefenders <= 3;
+
     let defaultPoints = 0;
     if (newPointType === 'tackle') {
-      defaultPoints = isSuperTacklePossible ? 2 : 1;
+      defaultPoints = superTackleIsOn ? 2 : 1;
     }
     if (newPointType === 'bonus') defaultPoints = 1;
 
@@ -132,7 +135,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         points: defaultPoints,
         eliminatedPlayerIds: [],
     });
-  };
+  }, [form, raidingTeamId, teams]);
 
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
@@ -162,16 +165,23 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       const isBonusType = ['bonus', 'raid-bonus'].includes(currentPointType);
       
       if (!bonusIsOn && isBonusType) {
-        handlePointTypeChange('raid');
+        // Instead of calling handlePointTypeChange, reset form directly
+        form.reset({
+          pointType: 'raid',
+          teamId: String(raidingTeamId),
+          playerId: '',
+          points: 0,
+          eliminatedPlayerIds: [],
+        });
       } else {
-        form.setValue('teamId', String(raidingTeamId));
+        form.setValue('teamId', String(form.getValues('teamId') || raidingTeamId));
       }
 
       if (currentPointType === 'tackle') {
         form.setValue('points', superTackleIsOn ? 2 : 1);
       }
     }
-  }, [open, teams, raidingTeamId, form, handlePointTypeChange]);
+  }, [open, teams, raidingTeamId, form]);
 
   useEffect(() => {
     if (!emptyRaidDialogOpen) {
