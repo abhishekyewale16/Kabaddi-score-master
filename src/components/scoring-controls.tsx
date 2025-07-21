@@ -81,6 +81,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const [open, setOpen] = useState(false);
   const [emptyRaidDialogOpen, setEmptyRaidDialogOpen] = useState(false);
   const [isBonusAvailable, setIsBonusAvailable] = useState(false);
+  const [isSuperTacklePossible, setIsSuperTacklePossible] = useState(false);
   const { toast } = useToast()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -111,7 +112,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
     let defaultPoints = 0;
-    if (newPointType === 'tackle') defaultPoints = 1;
+    if (newPointType === 'tackle') {
+      defaultPoints = isSuperTacklePossible ? 2 : 1;
+    }
     if (newPointType === 'bonus') defaultPoints = 1;
 
     form.reset({
@@ -140,9 +143,13 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     if(open) {
       const defendingTeam = teams.find(t => t.id !== raidingTeamId);
       const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
+      
       const bonusIsOn = activeDefenders >= 6;
       setIsBonusAvailable(bonusIsOn);
       
+      const superTackleIsOn = activeDefenders <= 3;
+      setIsSuperTacklePossible(superTackleIsOn);
+
       const currentPointType = form.getValues('pointType');
       const isBonusType = ['bonus', 'raid-bonus'].includes(currentPointType);
       
@@ -150,6 +157,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         handlePointTypeChange('raid');
       } else {
         form.setValue('teamId', String(raidingTeamId));
+      }
+
+      if (currentPointType === 'tackle') {
+        form.setValue('points', superTackleIsOn ? 2 : 1);
       }
     }
   }, [open, teams, raidingTeamId, form]);
@@ -359,11 +370,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                 className="flex gap-4"
                             >
                                 <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl><RadioGroupItem value="1" /></FormControl>
+                                    <FormControl><RadioGroupItem value="1" disabled={isSuperTacklePossible} /></FormControl>
                                     <FormLabel className="font-normal">1 Point</FormLabel>
                                 </FormItem>
                                 <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl><RadioGroupItem value="2" /></FormControl>
+                                    <FormControl><RadioGroupItem value="2" disabled={!isSuperTacklePossible} /></FormControl>
                                     <FormLabel className="font-normal">2 Points (Super Tackle)</FormLabel>
                                 </FormItem>
                             </RadioGroup>

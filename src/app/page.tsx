@@ -77,8 +77,8 @@ export default function Home() {
     } catch (error) {
         console.error("Error generating commentary:", error);
         toast({
-            title: "AI Commentator Busy",
-            description: "The AI service is currently overloaded. Please try again later.",
+            title: "AI Commentator Overloaded",
+            description: "The AI service is currently busy. Please try again later.",
             variant: "destructive",
         });
     } finally {
