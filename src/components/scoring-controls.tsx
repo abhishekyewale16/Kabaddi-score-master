@@ -36,7 +36,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClipboardPlus, Star, Shield, Swords, PlusSquare, UserMinus, Ban, Replace } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from './ui/checkbox';
-import { Label } from './ui/label';
 
 interface ScoringControlsProps {
   teams: [Team, Team];
@@ -110,53 +109,51 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     }
   });
 
-  const selectedPointType = form.watch('pointType');
-  const raidingTeam = teams.find(t => t.id === raidingTeamId);
-  const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
-  
-  const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
-    const isTackle = newPointType === 'tackle';
-    const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
-    
-    const defendingTeamId = isTackle ? raidingTeamId : (raidingTeamId === 1 ? 2 : 1);
-    const defendingTeam = teams.find(t => t.id === defendingTeamId);
-    
-    const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
-    const superTackleIsOn = activeDefenders <= 3;
-    setIsSuperTacklePossible(superTackleIsOn);
-
-    let defaultPoints = 0;
-    if (newPointType === 'tackle') {
-      defaultPoints = superTackleIsOn ? 2 : 1;
-    }
-    if (newPointType === 'bonus') defaultPoints = 1;
-
-    form.reset({
-        pointType: newPointType,
-        teamId: newTeamId,
-        playerId: '',
-        points: defaultPoints,
-        eliminatedPlayerIds: [],
-    });
-  }, [form, raidingTeamId, teams]);
-
   useEffect(() => {
     if (open) {
-      handlePointTypeChange('raid');
       const defendingTeam = teams.find(t => t.id !== raidingTeamId);
       const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
-      
-      const bonusIsOn = activeDefenders >= 6;
-      setIsBonusAvailable(bonusIsOn);
+      setIsBonusAvailable(activeDefenders >= 6);
+      setIsSuperTacklePossible(activeDefenders <= 3);
+
+      form.reset({
+        teamId: String(raidingTeamId),
+        pointType: 'raid',
+        points: 0,
+        playerId: '',
+        eliminatedPlayerIds: [],
+      });
     }
-  }, [open, teams, raidingTeamId, handlePointTypeChange]);
+  }, [open, teams, raidingTeamId, form]);
 
   useEffect(() => {
     if (!emptyRaidDialogOpen) {
         emptyRaidForm.reset({ playerId: '' });
     }
   }, [emptyRaidDialogOpen, emptyRaidForm]);
+
+  const selectedPointType = form.watch('pointType');
   
+  const handlePointTypeChange = (newPointType: z.infer<typeof formSchema>['pointType']) => {
+    const isTackle = newPointType === 'tackle';
+    const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+    
+    let defaultPoints = 0;
+    if (newPointType === 'tackle') {
+      defaultPoints = isSuperTacklePossible ? 2 : 1;
+    }
+    if (newPointType === 'bonus') defaultPoints = 1;
+
+    form.reset({
+        ...form.getValues(),
+        pointType: newPointType,
+        teamId: newTeamId,
+        playerId: '',
+        points: defaultPoints,
+        eliminatedPlayerIds: [],
+    });
+  };
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     const data = {
         teamId: Number(values.teamId),
@@ -188,14 +185,15 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const isTackleEvent = selectedPointType === 'tackle';
   const scoringTeamId = Number(form.watch('teamId'));
-  
+
   const playerSelectTeam = teams.find(t => t.id === scoringTeamId);
-  
   const teamToEliminateId = isTackleEvent ? raidingTeamId : (scoringTeamId === 1 ? 2 : 1);
   const eliminatedPlayerTeam = teams.find(t => t.id === teamToEliminateId);
 
   const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   const availableToEliminatePlayers = eliminatedPlayerTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
+  const raidingTeamForEmptyRaid = teams.find(t => t.id === raidingTeamId);
+  const eligibleRaidingPlayers = raidingTeamForEmptyRaid?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   
   const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus'].includes(selectedPointType);
 
@@ -434,7 +432,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Raiding Player</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={!raidingTeam}>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={!raidingTeamForEmptyRaid}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select an active player" />
@@ -468,9 +466,3 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
-
-    
-
-    
-
-    
