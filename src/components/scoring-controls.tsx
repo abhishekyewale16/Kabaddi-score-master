@@ -113,8 +113,8 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const selectedPointType = form.watch('pointType');
   const raidingTeam = teams.find(t => t.id === raidingTeamId);
   const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
-
-  const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
+  
+  const handlePointTypeChange = (newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
@@ -135,23 +135,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         points: defaultPoints,
         eliminatedPlayerIds: [],
     });
-  }, [form, raidingTeamId, teams]);
+  };
 
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-        if (name === 'eliminatedPlayerIds') {
-            const pointTypesToUpdate = ['raid', 'raid-bonus'];
-            if (pointTypesToUpdate.includes(value.pointType as string)) {
-                form.setValue('points', value.eliminatedPlayerIds?.length ?? 0);
-            }
-        }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-
-  useEffect(() => {
-    if(open) {
+    if (open) {
       form.reset({
         teamId: String(raidingTeamId),
         pointType: 'raid',
@@ -159,7 +146,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         playerId: '',
         eliminatedPlayerIds: [],
       });
-        
       const defendingTeam = teams.find(t => t.id !== raidingTeamId);
       const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
       
@@ -328,9 +314,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                                             <Checkbox
                                                                 checked={field.value?.includes(player.id)}
                                                                 onCheckedChange={(checked) => {
-                                                                    return checked
-                                                                        ? field.onChange([...(field.value ?? []), player.id])
-                                                                        : field.onChange(field.value?.filter((value) => value !== player.id));
+                                                                    const newSelectedIds = checked
+                                                                        ? [...(field.value ?? []), player.id]
+                                                                        : field.value?.filter((value) => value !== player.id);
+                                                                    field.onChange(newSelectedIds);
+                                                                    form.setValue('points', newSelectedIds?.length ?? 0);
                                                                 }}
                                                             />
                                                         </FormControl>
@@ -486,3 +474,5 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
