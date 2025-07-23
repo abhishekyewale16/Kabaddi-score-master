@@ -152,6 +152,14 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
   useEffect(() => {
     if(open) {
+      form.reset({
+        teamId: String(raidingTeamId),
+        pointType: 'raid',
+        points: 0,
+        playerId: '',
+        eliminatedPlayerIds: [],
+      });
+        
       const defendingTeam = teams.find(t => t.id !== raidingTeamId);
       const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
       
@@ -162,21 +170,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       setIsSuperTacklePossible(superTackleIsOn);
 
       const currentPointType = form.getValues('pointType');
-      const isBonusType = ['bonus', 'raid-bonus'].includes(currentPointType);
       
-      if (!bonusIsOn && isBonusType) {
-        // Instead of calling handlePointTypeChange, reset form directly
-        form.reset({
-          pointType: 'raid',
-          teamId: String(raidingTeamId),
-          playerId: '',
-          points: 0,
-          eliminatedPlayerIds: [],
-        });
-      } else {
-        form.setValue('teamId', String(form.getValues('teamId') || raidingTeamId));
-      }
-
       if (currentPointType === 'tackle') {
         form.setValue('points', superTackleIsOn ? 2 : 1);
       }
@@ -236,10 +230,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <Dialog open={open} onOpenChange={(isOpen) => {
-            setOpen(isOpen);
-            if (!isOpen) form.reset({ teamId: String(raidingTeamId), pointType: 'raid', points: 0, playerId: '', eliminatedPlayerIds: [] });
-        }}>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="w-full" disabled={!isTimerRunning}>Add Score Event</Button>
           </DialogTrigger>
