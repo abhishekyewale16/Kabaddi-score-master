@@ -114,13 +114,14 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const raidingTeam = teams.find(t => t.id === raidingTeamId);
   const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   
-  const handlePointTypeChange = (newPointType: z.infer<typeof formSchema>['pointType']) => {
+  const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
     const defendingTeam = teams.find(t => t.id !== (isTackle ? Number(newTeamId) : raidingTeamId));
     const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
     const superTackleIsOn = activeDefenders <= 3;
+    setIsSuperTacklePossible(superTackleIsOn);
 
     let defaultPoints = 0;
     if (newPointType === 'tackle') {
@@ -135,7 +136,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         points: defaultPoints,
         eliminatedPlayerIds: [],
     });
-  };
+  }, [form, raidingTeamId, teams]);
 
   useEffect(() => {
     if (open) {
@@ -154,12 +155,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       
       const superTackleIsOn = activeDefenders <= 3;
       setIsSuperTacklePossible(superTackleIsOn);
-
-      const currentPointType = form.getValues('pointType');
-      
-      if (currentPointType === 'tackle') {
-        form.setValue('points', superTackleIsOn ? 2 : 1);
-      }
     }
   }, [open, teams, raidingTeamId, form]);
 
@@ -301,7 +296,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                 <div className="flex justify-between items-center">
                                   <FormLabel>Eliminated Players ({eliminatedPlayerTeam?.name})</FormLabel>
                                 </div>
-                                <div className="space-y-2 rounded-md border p-2 h-32 overflow-y-auto">
+                                <div className="space-y-2 rounded-md border p-2 max-h-40 overflow-y-auto">
                                     {availableToEliminatePlayers?.map((player) => (
                                         <FormField
                                             key={player.id}
@@ -474,5 +469,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
 
     
