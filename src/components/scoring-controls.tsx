@@ -111,36 +111,47 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const selectedPointType = form.watch('pointType');
   const scoringTeamId = Number(form.watch('teamId'));
+  
+  const raidingTeam = useMemo(() => teams.find(t => t.id === raidingTeamId)!, [teams, raidingTeamId]);
+  const defendingTeam = useMemo(() => teams.find(t => t.id !== raidingTeamId)!, [teams, raidingTeamId]);
+  
+  const activeRaidingPlayers = useMemo(() => 
+    raidingTeam.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0) ?? [],
+    [raidingTeam]
+  );
+  
+  const activeDefendingPlayers = useMemo(() =>
+    defendingTeam.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0) ?? [],
+    [defendingTeam]
+  );
 
   useEffect(() => {
-    if (open) {
-      const defendingTeam = teams.find(t => t.id !== raidingTeamId);
-      const activeDefenders = defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length ?? 0;
-      setIsBonusAvailable(activeDefenders >= 6);
-      setIsSuperTacklePossible(activeDefenders <= 3);
+    const activeDefenders = activeDefendingPlayers.length ?? 0;
+    setIsBonusAvailable(activeDefenders >= 6);
+    setIsSuperTacklePossible(activeDefenders <= 3);
+  }, [activeDefendingPlayers]);
 
-      const isTackle = selectedPointType === 'tackle';
-      const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
-      
-      form.reset({
-        teamId: newTeamId,
-        pointType: selectedPointType,
-        points: isTackle ? (activeDefenders <=3 ? 2: 1) : 0,
-        playerId: '',
-        eliminatedPlayerIds: [],
-      });
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+        const defaultPointType = 'raid';
+        const isTackle = defaultPointType === 'tackle';
+        const teamId = isTackle ? String(defendingTeam.id) : String(raidingTeam.id);
+        const defaultPoints = isTackle ? (isSuperTacklePossible ? 2 : 1) : 0;
+        
+        form.reset({
+            teamId: teamId,
+            pointType: defaultPointType,
+            points: defaultPoints,
+            playerId: '',
+            eliminatedPlayerIds: [],
+        });
     }
-  }, [open, teams, raidingTeamId, form, selectedPointType]);
-
-  useEffect(() => {
-    if (!emptyRaidDialogOpen) {
-        emptyRaidForm.reset({ playerId: '' });
-    }
-  }, [emptyRaidDialogOpen, emptyRaidForm]);
+  };
 
   const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
-    const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+    const newTeamId = isTackle ? String(defendingTeam.id) : String(raidingTeam.id);
     
     let defaultPoints = 0;
     if (newPointType === 'tackle') {
@@ -155,8 +166,16 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         points: defaultPoints,
         eliminatedPlayerIds: [],
     });
-  }, [raidingTeamId, form, isSuperTacklePossible]);
+  }, [raidingTeam, defendingTeam, form, isSuperTacklePossible]);
 
+
+  useEffect(() => {
+    if (!emptyRaidDialogOpen) {
+        emptyRaidForm.reset({ playerId: '' });
+    }
+  }, [emptyRaidDialogOpen, emptyRaidForm]);
+
+  
   function onSubmit(values: z.infer<typeof formSchema>) {
     const data = {
         teamId: Number(values.teamId),
@@ -188,28 +207,13 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const isTackleEvent = selectedPointType === 'tackle';
   
-  const raidingTeam = useMemo(() => teams.find(t => t.id === raidingTeamId), [teams, raidingTeamId]);
-  const defendingTeamId = useMemo(() => raidingTeamId === 1 ? 2 : 1, [raidingTeamId]);
-  const defendingTeam = useMemo(() => teams.find(t => t.id === defendingTeamId), [teams, defendingTeamId]);
-
-  const activeRaidingPlayers = useMemo(() => 
-    raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0) ?? [],
-    [raidingTeam]
-  );
-  
-  const activeDefendingPlayers = useMemo(() =>
-    defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0) ?? [],
-    [defendingTeam]
-  );
-  
   const playerSelectionList = isTackleEvent ? activeDefendingPlayers : activeRaidingPlayers;
   const playerSelectTeam = isTackleEvent ? defendingTeam : raidingTeam;
   
   const eliminatedPlayerList = isTackleEvent ? activeRaidingPlayers : activeDefendingPlayers;
   const eliminatedPlayerTeam = isTackleEvent ? raidingTeam : defendingTeam;
 
-  const raidingTeamForEmptyRaid = teams.find(t => t.id === raidingTeamId);
-  const eligibleRaidingPlayers = raidingTeamForEmptyRaid?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
+  const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   
   const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus'].includes(selectedPointType);
 
@@ -222,7 +226,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button className="w-full" disabled={!isTimerRunning}>Add Score Event</Button>
           </DialogTrigger>
@@ -288,7 +292,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {playerSelectionList?.map(player => (
+                          {playerSelectionList.map(player => (
                             <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -308,7 +312,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                   <FormLabel>Eliminated Players ({eliminatedPlayerTeam?.name})</FormLabel>
                                 </div>
                                 <div className="space-y-2 rounded-md border p-2 max-h-40 overflow-y-auto">
-                                    {eliminatedPlayerList?.map((player) => (
+                                    {eliminatedPlayerList.map((player) => (
                                         <FormField
                                             key={player.id}
                                             control={form.control}
@@ -361,7 +365,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {eliminatedPlayerList?.map(player => (
+                                        {eliminatedPlayerList.map(player => (
                                             <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -448,7 +452,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Raiding Player</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value} disabled={!raidingTeamForEmptyRaid}>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={!raidingTeam}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select an active player" />
