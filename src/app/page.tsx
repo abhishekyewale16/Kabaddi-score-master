@@ -19,6 +19,8 @@ import { FoulPlay } from '@/components/foul-play';
 
 
 const INITIAL_MATCH_DURATION = 20;
+const LOCAL_STORAGE_KEY = 'kabaddiMatchState';
+
 
 export type RaidState = {
   team1: number;
@@ -32,6 +34,8 @@ export type SubstitutionState = {
 
 export default function Home() {
   const { toast } = useToast();
+
+  const [isLoaded, setIsLoaded] = useState(false);
   const [teams, setTeams] = useState<[Team, Team]>(initialTeams);
   const [raidState, setRaidState] = useState<RaidState>({ team1: 0, team2: 0 });
   const [raidingTeamId, setRaidingTeamId] = useState<number>(1);
@@ -48,6 +52,45 @@ export default function Home() {
     isTimeout: false,
   });
   const prevTeamsRef = useRef<[Team, Team]>(teams);
+
+  // Load state from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedStateJSON) {
+        const savedState = JSON.parse(savedStateJSON);
+        setTeams(savedState.teams);
+        setRaidState(savedState.raidState);
+        setRaidingTeamId(savedState.raidingTeamId);
+        setCommentaryLog(savedState.commentaryLog);
+        setMatchDuration(savedState.matchDuration);
+        setMatchEvents(savedState.matchEvents);
+        setTimer(savedState.timer);
+      }
+    } catch (error) {
+      console.error("Failed to load state from localStorage", error);
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save initial un-hydrated state
+    try {
+      const stateToSave = {
+        teams,
+        raidState,
+        raidingTeamId,
+        commentaryLog,
+        matchDuration,
+        matchEvents,
+        timer,
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error("Failed to save state to localStorage", error);
+    }
+  }, [teams, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isLoaded]);
 
   const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0);
   const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
@@ -177,6 +220,14 @@ export default function Home() {
   }, [timer, matchDuration, toast]);
 
   const handleResetTimer = useCallback(() => {
+    // Clear state from localStorage first
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_KEY);
+    } catch (error) {
+      console.error("Failed to clear state from localStorage", error);
+    }
+
+    // Then reset the state in the component
     setTimer({
       minutes: matchDuration,
       seconds: 0,
@@ -379,7 +430,8 @@ export default function Home() {
     let defenderForCommentary: string | undefined;
 
     if (eventType === 'line_out') {
-        raiderForCommentary = data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 1 ? "Multiple players" : "A player";
+        const eliminatedPlayers = teams.find(t => t.id === raidingTeamId)?.players.filter(p => data.eliminatedPlayerIds?.includes(p.id));
+        raiderForCommentary = eliminatedPlayers?.map(p => p.name).join(', ') ?? 'A player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
         const eliminatedPlayerId = data.eliminatedPlayerIds?.[0];
@@ -389,6 +441,8 @@ export default function Home() {
     } else if (data.pointType === 'bonus') {
         const activeRaider = teams.find(t=> t.id === raidingTeamId)?.players.find(p => p.id === data.playerId);
         raiderForCommentary = activeRaider?.name ?? 'A player';
+    } else if (isTechnicalPoint) {
+        raiderForCommentary = "Technical";
     }
     else {
         raiderForCommentary = player?.name ?? "A player";
@@ -818,6 +872,10 @@ export default function Home() {
         a.remove();
     });
 }, [commentaryLog, teams]);
+
+  if (!isLoaded) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <>
