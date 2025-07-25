@@ -117,6 +117,7 @@ const generateCommentaryFlow = ai.defineFlow(
 
     let attempts = 0;
     const maxAttempts = 3;
+    let lastError: any;
 
     while (attempts < maxAttempts) {
       try {
@@ -124,18 +125,14 @@ const generateCommentaryFlow = ai.defineFlow(
         return output!;
       } catch (error: any) {
         attempts++;
-        if (error.message.includes('503') && attempts < maxAttempts) {
+        lastError = error;
+        if (attempts < maxAttempts) {
           // Wait for a short period before retrying
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
-        } else {
-          // If it's not a 503 error or we've run out of attempts, rethrow the error.
-          throw error;
         }
       }
     }
-    // This line should not be reached, but is here for type safety.
-    throw new Error('Failed to generate commentary after multiple attempts.');
+    // If all attempts fail, throw the last captured error.
+    throw lastError;
   }
 );
-
-    
