@@ -124,8 +124,12 @@ const generateCommentaryFlow = ai.defineFlow(
         const {output} = await prompt(processedInput);
         return output!;
       } catch (error: any) {
-        attempts++;
         lastError = error;
+        // Do not retry on 429 quota errors
+        if (error.message && error.message.includes('429')) {
+            throw lastError;
+        }
+        attempts++;
         if (attempts < maxAttempts) {
           // Wait for a short period before retrying
           await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
