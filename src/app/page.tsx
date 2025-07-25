@@ -117,13 +117,21 @@ export default function Home() {
         if (result && result.commentary) {
             setCommentaryLog(prev => [result.commentary, ...prev]);
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating commentary:", error);
-        toast({
-            title: "AI Commentator Overloaded",
-            description: "The AI commentary service is currently experiencing high demand. Please try again in a moment.",
-            variant: "destructive",
-        });
+        if (error.message && error.message.includes('429')) {
+             toast({
+                title: "AI Commentary Limit Reached",
+                description: "The daily free limit for the AI commentary service has been reached. It will be available again tomorrow.",
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "AI Commentator Overloaded",
+                description: "The AI commentary service is currently experiencing high demand. Please try again in a moment.",
+                variant: "destructive",
+            });
+        }
     } finally {
         setIsCommentaryLoading(false);
     }
