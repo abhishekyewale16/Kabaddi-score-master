@@ -298,58 +298,45 @@ export default function Home() {
     }
   }, [timer.isRunning, isMatchPristine]);
   
-  const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number, eliminatedPlayerIds?: number[] }) => {
+  const handleAddScore = useCallback((data: { teamId?: number; playerId?: number; pointType: string; points: number, eliminatedPlayerIds?: number[] }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const isRaidEvent = !data.pointType.includes('tackle') && data.pointType !== 'technical_point';
     const isTackleEvent = data.pointType.includes('tackle');
+    
+    let isLona = false;
 
     if (isRaidEvent) {
         const teamKey = raidingTeamId === 1 ? 'team1' : 'team2';
         setRaidState(prev => ({ ...prev, [teamKey]: 0 }));
     }
-
-    const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
-    if (scoringTeamIndex === -1 && data.pointType !== 'line-out') return;
     
-    const defendingTeamId = data.teamId === 1 ? 2 : 1;
-    const defendingTeamIndex = newTeams.findIndex(t => t.id === defendingTeamId);
-
+    let scoringTeamIndex: number;
     if (data.pointType === 'line-out') {
-        const opposingTeamIndex = raidingTeamId === 1 ? 1 : 0;
-        newTeams[opposingTeamIndex].score += data.points;
-        const raidingTeamIndex = raidingTeamId === 1 ? 0 : 1;
-        if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
-            newTeams[raidingTeamIndex].players.forEach(player => {
-                if (data.eliminatedPlayerIds!.includes(player.id)) {
-                    player.isOut = true;
-                }
-            });
+        scoringTeamIndex = newTeams.findIndex(t => t.id !== raidingTeamId)!;
+    } else {
+        scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId)!;
+    }
+    if (scoringTeamIndex === -1) return;
+
+    
+    const defendingTeamId = newTeams[scoringTeamIndex].id === 1 ? 2 : 1;
+    const defendingTeamIndex = newTeams.findIndex(t => t.id === defendingTeamId)!;
+
+    if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
+        let teamToUpdateIndex: number;
+        if (isTackleEvent) {
+            teamToUpdateIndex = newTeams.findIndex(t => t.id === raidingTeamId)!;
+        } else if (data.pointType === 'line-out') {
+            teamToUpdateIndex = newTeams.findIndex(t => t.id === raidingTeamId)!;
+        } else {
+            teamToUpdateIndex = defendingTeamIndex;
         }
-    } else if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
-        const teamToUpdateIndex = isTackleEvent ? (raidingTeamId === 1 ? 0 : 1) : defendingTeamIndex;
+        
         newTeams[teamToUpdateIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
                 player.isOut = true;
             }
         });
-    }
-
-    if (defendingTeamIndex !== -1) {
-        const activePlayersOnMat = newTeams[defendingTeamIndex].players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length;
-        let isLona = false;
-        if (activePlayersOnMat === 0) {
-            isLona = true;
-            newTeams[scoringTeamIndex].score += 2;
-            
-            newTeams[defendingTeamIndex].players.forEach(player => {
-                player.isOut = false;
-            });
-    
-            toast({
-                title: "LONA! ALL OUT!",
-                description: `${newTeams[scoringTeamIndex].name} get 2 extra points for an All Out!`,
-            });
-        }
     }
 
     if (data.pointType !== 'line-out') {
@@ -406,19 +393,42 @@ export default function Home() {
                 player.totalPoints += playerPointIncrement;
             }
         }
+    } else {
+        newTeams[scoringTeamIndex].score += data.points;
     }
+
+    const teamToCheckForLona = data.pointType === 'line-out' ? raidingTeamId : defendingTeamId;
+    const teamIndexForLona = newTeams.findIndex(t => t.id === teamToCheckForLona)!;
+    
+    if (teamIndexForLona !== -1) {
+        const activePlayersOnMat = newTeams[teamIndexForLona].players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length;
+        if (activePlayersOnMat === 0) {
+            isLona = true;
+            newTeams[scoringTeamIndex].score += 2;
+            
+            newTeams[teamIndexForLona].players.forEach(player => {
+                player.isOut = false;
+            });
+    
+            toast({
+                title: "LONA! ALL OUT!",
+                description: `${newTeams[scoringTeamIndex].name} get 2 extra points for an All Out!`,
+            });
+        }
+    }
+
     
     const team1Score = newTeams.find(t => t.id === 1)!.score;
     const team2Score = newTeams.find(t => t.id === 2)!.score;
 
-    const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
-    const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
+    const scoringTeam = newTeams[scoringTeamIndex];
+    const defendingTeam = newTeams[defendingTeamIndex];
     const player = scoringTeam?.players.find(p => p.id === data.playerId);
     
     const isTechnicalPoint = data.pointType === 'technical_point';
 
-    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : isTechnicalPoint ? scoringTeam : data.pointType === 'line-out' ? teams.find(t => t.id === raidingTeamId)! : scoringTeam;
-    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : isTechnicalPoint ? defendingTeam : data.pointType === 'line-out' ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam; 
+    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : data.pointType === 'line-out' ? teams.find(t => t.id === raidingTeamId)! : scoringTeam;
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : data.pointType === 'line-out' ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam; 
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
     const totalPointsInRaid = data.points + (['raid-bonus', 'bonus'].includes(data.pointType) ? 1 : 0);
     const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus');
@@ -436,8 +446,11 @@ export default function Home() {
     
     let raiderForCommentary: string | undefined;
     let defenderForCommentary: string | undefined;
-
-    if (eventType === 'line_out') {
+    
+    if (data.pointType === 'bonus') {
+        const activeRaider = teams.find(t => t.id === raidingTeamId)?.players.find(p => p.id === data.playerId);
+        raiderForCommentary = activeRaider?.name;
+    } else if (eventType === 'line_out') {
         const eliminatedPlayers = teams.find(t => t.id === raidingTeamId)?.players.filter(p => data.eliminatedPlayerIds?.includes(p.id));
         raiderForCommentary = eliminatedPlayers?.map(p => p.name).join(', ') ?? 'A player';
     } else if (isTackleEvent) {
@@ -446,9 +459,6 @@ export default function Home() {
         const activeRaider = originalRaidingTeam?.players.find(p => p.id === eliminatedPlayerId);
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
-    } else if (data.pointType === 'bonus') {
-        const activeRaider = teams.find(t=> t.id === raidingTeamId)?.players.find(p => p.id === data.playerId);
-        raiderForCommentary = activeRaider?.name ?? 'A player';
     } else if (isTechnicalPoint) {
         raiderForCommentary = "Technical";
     }
@@ -465,7 +475,7 @@ export default function Home() {
         isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
         isDoOrDie: currentRaidCount === 2,
         isBonus: ['raid-bonus', 'bonus'].includes(data.pointType),
-        isLona: false, // isLona logic is already handled, this can be passed to AI
+        isLona: isLona,
         raidCount: currentRaidCount,
         team1Score,
         team2Score,
