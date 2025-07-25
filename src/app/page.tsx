@@ -78,7 +78,7 @@ export default function Home() {
         console.error("Error generating commentary:", error);
         toast({
             title: "AI Commentator Overloaded",
-            description: "The AI service is currently busy. Please try again later.",
+            description: "The AI commentary service is currently experiencing high demand. Please try again in a moment.",
             variant: "destructive",
         });
     } finally {
@@ -241,11 +241,11 @@ export default function Home() {
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number, eliminatedPlayerIds?: number[] }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-    const isRaidEvent = !['tackle', 'line-out'].includes(data.pointType);
+    const isRaidEvent = !data.pointType.includes('tackle');
     const isTackleEvent = data.pointType.includes('tackle');
 
     if (isRaidEvent) {
-        const teamKey = data.teamId === 1 ? 'team1' : 'team2';
+        const teamKey = raidingTeamId === 1 ? 'team1' : 'team2';
         setRaidState(prev => ({ ...prev, [teamKey]: 0 }));
     }
 
@@ -369,14 +369,11 @@ export default function Home() {
         eventType = 'raid_score';
     }
     
-    let raiderForCommentary: string | undefined = "Multiple Players";
+    let raiderForCommentary: string | undefined;
     let defenderForCommentary: string | undefined;
 
     if (eventType === 'line_out') {
-        if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length === 1) {
-            const originalRaidingTeam = teams.find(t => t.id === raidingTeamId)
-            raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.eliminatedPlayerIds![0])?.name ?? 'Unknown Player';
-        }
+        raiderForCommentary = data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 1 ? "Multiple players" : "A player";
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
         const eliminatedPlayerId = data.eliminatedPlayerIds?.[0];
@@ -384,7 +381,7 @@ export default function Home() {
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else {
-        raiderForCommentary = player?.name;
+        raiderForCommentary = player?.name ?? "A player";
     }
 
     const commentaryData: any = {
