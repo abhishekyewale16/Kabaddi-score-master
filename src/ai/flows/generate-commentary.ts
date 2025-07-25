@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateCommentaryInputSchema = z.object({
-  eventType: z.enum(['raid_score', 'tackle_score', 'super_tackle_score', 'empty_raid', 'line_out', 'do_or_die_fail', 'green_card', 'yellow_card', 'red_card']).describe("The type of event that occurred."),
+  eventType: z.enum(['raid_score', 'tackle_score', 'super_tackle_score', 'empty_raid', 'line_out', 'do_or_die_fail', 'green_card', 'yellow_card', 'red_card', 'technical_point']).describe("The type of event that occurred."),
   raidingTeam: z.string().describe("The name of the raiding team, or the team of the player who committed the foul."),
   defendingTeam: z.string().describe("The name of the defending team, or the opposing team."),
   raiderName: z.string().describe("The name of the raider, or the player who committed the foul."),
@@ -69,6 +69,9 @@ const prompt = ai.definePrompt({
   {{#if is_red_card}}
   RED CARD! {{raiderName}} of {{raidingTeam}} has been sent off for the rest of the match! A technical point is awarded to {{defendingTeam}}. A huge blow for {{raidingTeam}}!
   {{/if}}
+  {{#if is_technical_point}}
+  A technical point has been awarded to {{raidingTeam}}!
+  {{/if}}
   {{#if is_other_event}}
   Event Type: {{eventType}}
   Raiding Team: {{raidingTeam}}
@@ -108,7 +111,8 @@ const generateCommentaryFlow = ai.defineFlow(
       is_green_card: input.eventType === 'green_card',
       is_yellow_card: input.eventType === 'yellow_card',
       is_red_card: input.eventType === 'red_card',
-      is_other_event: !['green_card', 'yellow_card', 'red_card'].includes(input.eventType),
+      is_technical_point: input.eventType === 'technical_point',
+      is_other_event: !['green_card', 'yellow_card', 'red_card', 'technical_point'].includes(input.eventType),
     };
 
     let attempts = 0;
@@ -133,3 +137,5 @@ const generateCommentaryFlow = ai.defineFlow(
     throw new Error('Failed to generate commentary after multiple attempts.');
   }
 );
+
+    

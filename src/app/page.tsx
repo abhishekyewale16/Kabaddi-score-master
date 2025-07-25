@@ -241,7 +241,7 @@ export default function Home() {
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number, eliminatedPlayerIds?: number[] }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-    const isRaidEvent = !data.pointType.includes('tackle');
+    const isRaidEvent = !data.pointType.includes('tackle') && data.pointType !== 'technical_point';
     const isTackleEvent = data.pointType.includes('tackle');
 
     if (isRaidEvent) {
@@ -275,20 +275,22 @@ export default function Home() {
         });
     }
 
-    const activePlayersOnMat = newTeams[defendingTeamIndex].players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length;
-    let isLona = false;
-    if (activePlayersOnMat === 0) {
-        isLona = true;
-        newTeams[scoringTeamIndex].score += 2;
-        
-        newTeams[defendingTeamIndex].players.forEach(player => {
-            player.isOut = false;
-        });
-
-        toast({
-            title: "LONA! ALL OUT!",
-            description: `${newTeams[scoringTeamIndex].name} get 2 extra points for an All Out!`,
-        });
+    if (defendingTeamIndex !== -1) {
+        const activePlayersOnMat = newTeams[defendingTeamIndex].players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0).length;
+        let isLona = false;
+        if (activePlayersOnMat === 0) {
+            isLona = true;
+            newTeams[scoringTeamIndex].score += 2;
+            
+            newTeams[defendingTeamIndex].players.forEach(player => {
+                player.isOut = false;
+            });
+    
+            toast({
+                title: "LONA! ALL OUT!",
+                description: `${newTeams[scoringTeamIndex].name} get 2 extra points for an All Out!`,
+            });
+        }
     }
 
     if (data.pointType !== 'line-out') {
@@ -353,9 +355,11 @@ export default function Home() {
     const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
     const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
     const player = scoringTeam?.players.find(p => p.id === data.playerId);
+    
+    const isTechnicalPoint = data.pointType === 'technical_point';
 
-    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : data.pointType === 'line-out' ? teams.find(t => t.id === raidingTeamId)! : scoringTeam;
-    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : data.pointType === 'line-out' ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam; 
+    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : isTechnicalPoint ? scoringTeam : data.pointType === 'line-out' ? teams.find(t => t.id === raidingTeamId)! : scoringTeam;
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : isTechnicalPoint ? defendingTeam : data.pointType === 'line-out' ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam; 
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
     const totalPointsInRaid = data.points + (['raid-bonus', 'bonus'].includes(data.pointType) ? 1 : 0);
     const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus');
@@ -365,6 +369,8 @@ export default function Home() {
         eventType = data.points === 2 ? 'super_tackle_score' : 'tackle_score';
     } else if (data.pointType === 'line-out') {
         eventType = 'line_out';
+    } else if (isTechnicalPoint) {
+        eventType = 'technical_point';
     } else {
         eventType = 'raid_score';
     }
@@ -380,7 +386,11 @@ export default function Home() {
         const activeRaider = originalRaidingTeam?.players.find(p => p.id === eliminatedPlayerId);
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
-    } else {
+    } else if (eventType === 'bonus') {
+        const activeRaider = teams.find(t=> t.id === raidingTeamId)?.players.find(p => p.id === data.playerId);
+        raiderForCommentary = activeRaider?.name ?? 'A player';
+    }
+    else {
         raiderForCommentary = player?.name ?? "A player";
     }
 
@@ -393,7 +403,7 @@ export default function Home() {
         isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
         isDoOrDie: currentRaidCount === 2,
         isBonus: ['raid-bonus', 'bonus'].includes(data.pointType),
-        isLona: isLona,
+        isLona: false, // isLona logic is already handled, this can be passed to AI
         raidCount: currentRaidCount,
         team1Score,
         team2Score,
@@ -404,7 +414,9 @@ export default function Home() {
     
     addCommentary(commentaryData);
     setTeams(newTeams);
-    switchRaidingTeam();
+    if (isRaidEvent || isTackleEvent) {
+      switchRaidingTeam();
+    }
 }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId, toast]);
 
 
@@ -864,3 +876,5 @@ export default function Home() {
     </>
   );
 }
+
+    

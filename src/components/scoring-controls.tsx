@@ -33,7 +33,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardPlus, Star, Shield, Swords, PlusSquare, UserMinus, Ban, Replace } from 'lucide-react';
+import { ClipboardPlus, Star, Shield, Swords, PlusSquare, UserMinus, Ban, Replace, Award } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from './ui/checkbox';
 
@@ -48,12 +48,12 @@ interface ScoringControlsProps {
 
 const formSchema = z.object({
   teamId: z.string().min(1, { message: 'Please select a team.' }),
-  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'line-out']),
+  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'line-out', 'technical_point']),
   points: z.coerce.number().min(0, { message: 'Points must be positive.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
   eliminatedPlayerIds: z.array(z.number()).optional(),
 }).refine(data => {
-  if (!['bonus', 'line-out'].includes(data.pointType)) {
+  if (!['bonus', 'line-out', 'technical_point'].includes(data.pointType)) {
     return data.playerId && data.playerId.length > 0;
   }
   return true;
@@ -159,13 +159,19 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
     const isLineOut = newPointType === 'line-out';
-    const newTeamId = isTackle || isLineOut ? String(defendingTeam.id) : String(raidingTeam.id);
+    const isTechnicalPoint = newPointType === 'technical_point';
+
+    const newTeamId = isTackle ? String(defendingTeam.id) : isLineOut || isTechnicalPoint ? '' : String(raidingTeam.id);
     
     let defaultPoints = 0;
     if (newPointType === 'tackle') {
       defaultPoints = isSuperTacklePossible ? 2 : 1;
+    } else if (newPointType === 'bonus') {
+        defaultPoints = 1;
+    } else if (isTechnicalPoint) {
+        defaultPoints = 1;
     }
-    if (newPointType === 'bonus') defaultPoints = 1;
+
 
     form.reset({
         pointType: newPointType,
@@ -196,7 +202,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     
     let toastDescription = `Added points for ${values.pointType.replace('-', ' ')}.`;
      if (values.pointType === 'line-out') {
-        const opposingTeam = teams.find(t => t.id !== raidingTeamId);
+        const opposingTeam = teams.find(t => t.id === raidingTeamId);
         toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for line out.`;
     }
 
@@ -214,6 +220,8 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const isTackleEvent = selectedPointType === 'tackle';
   const isLineOutEvent = selectedPointType === 'line-out';
+  const isTechnicalPointEvent = selectedPointType === 'technical_point';
+
   
   const playerSelectionList = isTackleEvent ? activeDefendingPlayers : activeRaidingPlayers;
   const playerSelectTeam = isTackleEvent ? defendingTeam : raidingTeam;
@@ -280,6 +288,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                             <FormControl><RadioGroupItem value="line-out" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><UserMinus className="w-4 h-4" /> Line Out</FormLabel>
                           </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="technical_point" /></FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Technical Point</FormLabel>
+                          </FormItem>
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
@@ -287,7 +299,32 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                   )}
                 />
 
-                {!isLineOutEvent &&
+                {isTechnicalPointEvent && (
+                  <FormField
+                    control={form.control}
+                    name="teamId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Team</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a team" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {teams.map(team => (
+                              <SelectItem key={team.id} value={String(team.id)}>{team.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {!isLineOutEvent && !isTechnicalPointEvent &&
                   <FormField
                     control={form.control}
                     name="playerId"
@@ -387,7 +424,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     />
                 )}
                 
-                 {(selectedPointType === 'raid' || selectedPointType === 'raid-bonus' || selectedPointType === 'line-out') && (
+                 {(selectedPointType === 'raid' || selectedPointType === 'raid-bonus' || selectedPointType === 'line-out' || isTechnicalPointEvent) && (
                   <FormField
                     control={form.control}
                     name="points"
@@ -497,3 +534,5 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
