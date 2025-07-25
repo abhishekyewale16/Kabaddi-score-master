@@ -131,8 +131,8 @@ const generateCommentaryFlow = ai.defineFlow(
         }
         attempts++;
         if (attempts < maxAttempts) {
-          // Wait for a short period before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+          // Wait for a short period with exponential backoff before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
         }
       }
     }
