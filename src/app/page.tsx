@@ -256,7 +256,8 @@ export default function Home() {
     const defendingTeamIndex = newTeams.findIndex(t => t.id === defendingTeamId);
 
     if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
-        newTeams[defendingTeamIndex].players.forEach(player => {
+        const teamToUpdateIndex = isTackleEvent ? raidingTeamId === 1 ? 0 : 1 : defendingTeamIndex;
+        newTeams[teamToUpdateIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
                 player.isOut = true;
             }
@@ -282,6 +283,12 @@ export default function Home() {
     if (data.pointType === 'line-out') {
         const opposingTeamIndex = 1 - scoringTeamIndex;
         newTeams[opposingTeamIndex].score += data.points;
+        if (data.playerId) {
+            const playerIndex = newTeams[scoringTeamIndex].players.findIndex(p => p.id === data.playerId);
+            if (playerIndex !== -1) {
+                newTeams[scoringTeamIndex].players[playerIndex].isOut = true;
+            }
+        }
     } else {
         let teamScoreIncrement = 0;
         if (data.pointType === 'bonus') {
@@ -857,3 +864,7 @@ export default function Home() {
   );
 }
 
+
+
+
+    
