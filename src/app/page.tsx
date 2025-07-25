@@ -386,7 +386,7 @@ export default function Home() {
         const activeRaider = originalRaidingTeam?.players.find(p => p.id === eliminatedPlayerId);
         raiderForCommentary = activeRaider?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
-    } else if (eventType === 'bonus') {
+    } else if (data.pointType === 'bonus') {
         const activeRaider = teams.find(t=> t.id === raidingTeamId)?.players.find(p => p.id === data.playerId);
         raiderForCommentary = activeRaider?.name ?? 'A player';
     }
