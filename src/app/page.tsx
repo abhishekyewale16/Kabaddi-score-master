@@ -250,13 +250,24 @@ export default function Home() {
     }
 
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
-    if (scoringTeamIndex === -1) return;
+    if (scoringTeamIndex === -1 && data.pointType !== 'line-out') return;
     
     const defendingTeamId = data.teamId === 1 ? 2 : 1;
     const defendingTeamIndex = newTeams.findIndex(t => t.id === defendingTeamId);
 
-    if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
-        const teamToUpdateIndex = isTackleEvent ? raidingTeamId === 1 ? 0 : 1 : defendingTeamIndex;
+    if (data.pointType === 'line-out') {
+        const opposingTeamIndex = raidingTeamId === 1 ? 1 : 0;
+        newTeams[opposingTeamIndex].score += data.points;
+        const raidingTeamIndex = raidingTeamId === 1 ? 0 : 1;
+        if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
+            newTeams[raidingTeamIndex].players.forEach(player => {
+                if (data.eliminatedPlayerIds!.includes(player.id)) {
+                    player.isOut = true;
+                }
+            });
+        }
+    } else if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length > 0) {
+        const teamToUpdateIndex = isTackleEvent ? (raidingTeamId === 1 ? 0 : 1) : defendingTeamIndex;
         newTeams[teamToUpdateIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
                 player.isOut = true;
@@ -280,16 +291,7 @@ export default function Home() {
         });
     }
 
-    if (data.pointType === 'line-out') {
-        const opposingTeamIndex = 1 - scoringTeamIndex;
-        newTeams[opposingTeamIndex].score += data.points;
-        if (data.playerId) {
-            const playerIndex = newTeams[scoringTeamIndex].players.findIndex(p => p.id === data.playerId);
-            if (playerIndex !== -1) {
-                newTeams[scoringTeamIndex].players[playerIndex].isOut = true;
-            }
-        }
-    } else {
+    if (data.pointType !== 'line-out') {
         let teamScoreIncrement = 0;
         if (data.pointType === 'bonus') {
             teamScoreIncrement = 1;
@@ -350,10 +352,10 @@ export default function Home() {
 
     const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
     const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
-    const player = scoringTeam.players.find(p => p.id === data.playerId);
+    const player = scoringTeam?.players.find(p => p.id === data.playerId);
 
-    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : scoringTeam;
-    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : defendingTeam; 
+    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : data.pointType === 'line-out' ? teams.find(t => t.id === raidingTeamId)! : scoringTeam;
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : data.pointType === 'line-out' ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam; 
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
     const totalPointsInRaid = data.points + (['raid-bonus', 'bonus'].includes(data.pointType) ? 1 : 0);
     const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus');
@@ -367,12 +369,14 @@ export default function Home() {
         eventType = 'raid_score';
     }
     
-    let raiderForCommentary: string | undefined;
+    let raiderForCommentary: string | undefined = "Multiple Players";
     let defenderForCommentary: string | undefined;
 
     if (eventType === 'line_out') {
-        const originalRaidingTeam = teams.find(t => t.id === raidingTeamId)
-        raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
+        if (data.eliminatedPlayerIds && data.eliminatedPlayerIds.length === 1) {
+            const originalRaidingTeam = teams.find(t => t.id === raidingTeamId)
+            raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.eliminatedPlayerIds![0])?.name ?? 'Unknown Player';
+        }
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
         const eliminatedPlayerId = data.eliminatedPlayerIds?.[0];
@@ -863,8 +867,3 @@ export default function Home() {
     </>
   );
 }
-
-
-
-
-    

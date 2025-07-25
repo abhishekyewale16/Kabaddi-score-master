@@ -53,7 +53,7 @@ const formSchema = z.object({
   playerId: z.string().optional(),
   eliminatedPlayerIds: z.array(z.number()).optional(),
 }).refine(data => {
-  if (!['bonus'].includes(data.pointType)) {
+  if (!['bonus', 'line-out'].includes(data.pointType)) {
     return data.playerId && data.playerId.length > 0;
   }
   return true;
@@ -61,7 +61,7 @@ const formSchema = z.object({
   message: "Player selection is required for this point type.",
   path: ["playerId"],
 }).refine(data => {
-    if (['raid', 'raid-bonus'].includes(data.pointType)) {
+    if (['raid', 'raid-bonus', 'line-out'].includes(data.pointType)) {
         return data.points === data.eliminatedPlayerIds?.length;
     }
     return true;
@@ -75,6 +75,14 @@ const formSchema = z.object({
     return true;
 }, {
     message: "You must select exactly one raider who was tackled.",
+    path: ["eliminatedPlayerIds"],
+}).refine(data => {
+    if (data.pointType === 'line-out') {
+        return (data.eliminatedPlayerIds?.length ?? 0) > 0;
+    }
+    return true;
+}, {
+    message: "You must select at least one player for a line out.",
     path: ["eliminatedPlayerIds"],
 });
 
@@ -110,7 +118,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   });
   
   const selectedPointType = form.watch('pointType');
-  const scoringTeamId = Number(form.watch('teamId'));
   
   const raidingTeam = useMemo(() => teams.find(t => t.id === raidingTeamId)!, [teams, raidingTeamId]);
   const defendingTeam = useMemo(() => teams.find(t => t.id !== raidingTeamId)!, [teams, raidingTeamId]);
@@ -151,7 +158,8 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
   const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
-    const newTeamId = isTackle ? String(defendingTeam.id) : String(raidingTeam.id);
+    const isLineOut = newPointType === 'line-out';
+    const newTeamId = isTackle || isLineOut ? String(defendingTeam.id) : String(raidingTeam.id);
     
     let defaultPoints = 0;
     if (newPointType === 'tackle') {
@@ -188,9 +196,8 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     
     let toastDescription = `Added points for ${values.pointType.replace('-', ' ')}.`;
      if (values.pointType === 'line-out') {
-        const lineOutTeam = teams.find(t => t.id === raidingTeamId)
         const opposingTeam = teams.find(t => t.id !== raidingTeamId);
-        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for ${lineOutTeam?.name}'s line out.`;
+        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for line out.`;
     }
 
     toast({
@@ -206,16 +213,17 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   }
   
   const isTackleEvent = selectedPointType === 'tackle';
+  const isLineOutEvent = selectedPointType === 'line-out';
   
   const playerSelectionList = isTackleEvent ? activeDefendingPlayers : activeRaidingPlayers;
   const playerSelectTeam = isTackleEvent ? defendingTeam : raidingTeam;
   
-  const eliminatedPlayerList = isTackleEvent ? activeRaidingPlayers : activeDefendingPlayers;
-  const eliminatedPlayerTeam = isTackleEvent ? raidingTeam : defendingTeam;
+  const eliminatedPlayerList = isTackleEvent || isLineOutEvent ? activeRaidingPlayers : activeDefendingPlayers;
+  const eliminatedPlayerTeam = isTackleEvent || isLineOutEvent ? raidingTeam : defendingTeam;
 
   const eligibleRaidingPlayers = raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   
-  const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus'].includes(selectedPointType);
+  const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus', 'line-out'].includes(selectedPointType);
 
   return (
     <Card>
@@ -279,28 +287,31 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="playerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{isTackleEvent ? 'Tackler' : 'Raider'} ({playerSelectTeam?.name})</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled={!playerSelectTeam || selectedPointType === 'bonus'}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select an active player" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {playerSelectionList.map(player => (
-                            <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {!isLineOutEvent &&
+                  <FormField
+                    control={form.control}
+                    name="playerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{isTackleEvent ? 'Tackler' : 'Raider'} ({playerSelectTeam?.name})</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!playerSelectTeam || selectedPointType === 'bonus'}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an active player" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {playerSelectionList.map(player => (
+                              <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                }
+
 
                 {showEliminatedPlayerSelection && !isTackleEvent && (
                     <FormField
@@ -309,7 +320,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                         render={() => (
                             <FormItem>
                                 <div className="flex justify-between items-center">
-                                  <FormLabel>Eliminated Players ({eliminatedPlayerTeam?.name})</FormLabel>
+                                  <FormLabel>{isLineOutEvent ? `Players Out (${eliminatedPlayerTeam?.name})` : `Eliminated Players (${eliminatedPlayerTeam?.name})` }</FormLabel>
                                 </div>
                                 <div className="space-y-2 rounded-md border p-2 max-h-40 overflow-y-auto">
                                     {eliminatedPlayerList.map((player) => (
@@ -328,7 +339,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                                                         ? [...(field.value ?? []), player.id]
                                                                         : field.value?.filter((value) => value !== player.id);
                                                                     field.onChange(newSelectedIds);
-                                                                    if (selectedPointType.includes('raid')) {
+                                                                    if (selectedPointType.includes('raid') || selectedPointType === 'line-out') {
                                                                       form.setValue('points', newSelectedIds?.length ?? 0);
                                                                     }
                                                                 }}
@@ -383,10 +394,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          {selectedPointType.includes('raid') ? 'Raid Points' : 'Number of Players'}
+                          {selectedPointType.includes('raid') ? 'Raid Points' : 'Points'}
                         </FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="e.g., 1" {...field} disabled={selectedPointType.includes('raid')} />
+                          <Input type="number" placeholder="e.g., 1" {...field} disabled={selectedPointType.includes('raid') || selectedPointType.includes('line-out')} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -486,5 +497,3 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
-
-    
