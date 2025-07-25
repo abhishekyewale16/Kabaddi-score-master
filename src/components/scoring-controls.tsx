@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm, useForm as useEmptyRaidForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -108,6 +108,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         playerId: ''
     }
   });
+  
+  const selectedPointType = form.watch('pointType');
+  const scoringTeamId = Number(form.watch('teamId'));
 
   useEffect(() => {
     if (open) {
@@ -116,15 +119,18 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       setIsBonusAvailable(activeDefenders >= 6);
       setIsSuperTacklePossible(activeDefenders <= 3);
 
+      const isTackle = selectedPointType === 'tackle';
+      const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+      
       form.reset({
-        teamId: String(raidingTeamId),
-        pointType: 'raid',
-        points: 0,
+        teamId: newTeamId,
+        pointType: selectedPointType,
+        points: isTackle ? (activeDefenders <=3 ? 2: 1) : 0,
         playerId: '',
         eliminatedPlayerIds: [],
       });
     }
-  }, [open, teams, raidingTeamId, form]);
+  }, [open, teams, raidingTeamId, form, selectedPointType]);
 
   useEffect(() => {
     if (!emptyRaidDialogOpen) {
@@ -132,9 +138,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     }
   }, [emptyRaidDialogOpen, emptyRaidForm]);
 
-  const selectedPointType = form.watch('pointType');
-  
-  const handlePointTypeChange = (newPointType: z.infer<typeof formSchema>['pointType']) => {
+  const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     
@@ -145,14 +149,13 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     if (newPointType === 'bonus') defaultPoints = 1;
 
     form.reset({
-        ...form.getValues(),
         pointType: newPointType,
         teamId: newTeamId,
         playerId: '',
         points: defaultPoints,
         eliminatedPlayerIds: [],
     });
-  };
+  }, [raidingTeamId, form, isSuperTacklePossible]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const data = {
@@ -184,14 +187,27 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   }
   
   const isTackleEvent = selectedPointType === 'tackle';
-  const scoringTeamId = Number(form.watch('teamId'));
+  
+  const raidingTeam = useMemo(() => teams.find(t => t.id === raidingTeamId), [teams, raidingTeamId]);
+  const defendingTeamId = useMemo(() => raidingTeamId === 1 ? 2 : 1, [raidingTeamId]);
+  const defendingTeam = useMemo(() => teams.find(t => t.id === defendingTeamId), [teams, defendingTeamId]);
 
-  const playerSelectTeam = teams.find(t => t.id === scoringTeamId);
-  const teamToEliminateId = isTackleEvent ? raidingTeamId : (scoringTeamId === 1 ? 2 : 1);
-  const eliminatedPlayerTeam = teams.find(t => t.id === teamToEliminateId);
+  const activeRaidingPlayers = useMemo(() => 
+    raidingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0) ?? [],
+    [raidingTeam]
+  );
+  
+  const activeDefendingPlayers = useMemo(() =>
+    defendingTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0) ?? [],
+    [defendingTeam]
+  );
+  
+  const playerSelectionList = isTackleEvent ? activeDefendingPlayers : activeRaidingPlayers;
+  const playerSelectTeam = isTackleEvent ? defendingTeam : raidingTeam;
+  
+  const eliminatedPlayerList = isTackleEvent ? activeRaidingPlayers : activeDefendingPlayers;
+  const eliminatedPlayerTeam = isTackleEvent ? raidingTeam : defendingTeam;
 
-  const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
-  const availableToEliminatePlayers = eliminatedPlayerTeam?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   const raidingTeamForEmptyRaid = teams.find(t => t.id === raidingTeamId);
   const eligibleRaidingPlayers = raidingTeamForEmptyRaid?.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded && p.suspensionTimer === 0);
   
@@ -272,7 +288,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {activePlayers?.map(player => (
+                          {playerSelectionList?.map(player => (
                             <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -292,7 +308,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                   <FormLabel>Eliminated Players ({eliminatedPlayerTeam?.name})</FormLabel>
                                 </div>
                                 <div className="space-y-2 rounded-md border p-2 max-h-40 overflow-y-auto">
-                                    {availableToEliminatePlayers?.map((player) => (
+                                    {eliminatedPlayerList?.map((player) => (
                                         <FormField
                                             key={player.id}
                                             control={form.control}
@@ -345,7 +361,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {availableToEliminatePlayers?.map(player => (
+                                        {eliminatedPlayerList?.map(player => (
                                             <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -466,3 +482,5 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
