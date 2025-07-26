@@ -166,12 +166,15 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
   const handlePointTypeChange = useCallback((newPointType: z.infer<typeof formSchema>['pointType']) => {
     const isTackle = newPointType === 'tackle';
-    const isLineOut = newPointType === 'line-out';
-    const isTechnicalPoint = newPointType === 'technical_point';
     
-    let newTeamId: string | undefined = isTackle ? String(defendingTeam.id) : String(raidingTeam.id);
-    if (isLineOut || isTechnicalPoint) {
+    let newTeamId: string | undefined;
+
+    if (newPointType === 'line-out') {
+      newTeamId = String(defendingTeam.id);
+    } else if (newPointType === 'technical_point') {
       newTeamId = undefined;
+    } else {
+      newTeamId = isTackle ? String(defendingTeam.id) : String(raidingTeam.id);
     }
 
     let defaultPoints = 0;
@@ -179,10 +182,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       defaultPoints = isSuperTacklePossible ? 2 : 1;
     } else if (newPointType === 'bonus') {
         defaultPoints = 1;
-    } else if (isTechnicalPoint) {
+    } else if (newPointType === 'technical_point' || newPointType === 'line-out') {
         defaultPoints = 1;
     }
-
 
     form.reset({
         pointType: newPointType,
@@ -250,8 +252,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   }, [isTackleEvent, isLineOutEvent, activeRaidingPlayers, activeDefendingPlayers]);
 
   const eliminatedPlayerTeam = useMemo(() => {
-    if (isTackleEvent) return raidingTeam;
-    if (isLineOutEvent) return raidingTeam;
+    if (isTackleEvent || isLineOutEvent) return raidingTeam;
     return defendingTeam;
   }, [isTackleEvent, isLineOutEvent, raidingTeam, defendingTeam]);
   
@@ -400,8 +401,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                                                         ? [...(field.value ?? []), player.id]
                                                                         : field.value?.filter((value) => value !== player.id);
                                                                     field.onChange(newSelectedIds);
-                                                                    if (selectedPointType.includes('raid') || selectedPointType === 'line-out') {
+                                                                    if (selectedPointType.includes('raid')) {
                                                                       form.setValue('points', newSelectedIds?.length ?? 0);
+                                                                    } else if (selectedPointType === 'line-out') {
+                                                                      form.setValue('points', newSelectedIds?.length ?? 0);
+                                                                      form.setValue('teamId', String(defendingTeam.id))
                                                                     }
                                                                 }}
                                                             />
@@ -559,3 +563,5 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
