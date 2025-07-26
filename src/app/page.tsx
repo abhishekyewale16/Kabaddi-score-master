@@ -404,7 +404,7 @@ export default function Home() {
         newTeams[scoringTeamIndex].score += data.points;
     }
 
-    const teamToCheckForLona = data.pointType === 'line-out' ? raidingTeamId : defendingTeamId;
+    const teamToCheckForLona = isTackleEvent ? raidingTeamId : (data.pointType === 'line-out' ? raidingTeamId : defendingTeamId);
     const teamIndexForLona = newTeams.findIndex(t => t.id === teamToCheckForLona)!;
     
     if (teamIndexForLona !== -1) {
@@ -959,3 +959,4 @@ export default function Home() {
     </>
   );
 }
+
