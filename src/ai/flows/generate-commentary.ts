@@ -30,7 +30,8 @@ const GenerateCommentaryInputSchema = z.object({
 export type GenerateCommentaryInput = z.infer<typeof GenerateCommentaryInputSchema>;
 
 const GenerateCommentaryOutputSchema = z.object({
-  commentary: z.string().describe('The generated commentary for the event.'),
+  commentary: z.string().optional().describe('The generated commentary for the event.'),
+  error: z.string().optional().describe('An error message if the commentary could not be generated.'),
 });
 export type GenerateCommentaryOutput = z.infer<typeof GenerateCommentaryOutputSchema>;
 
@@ -41,7 +42,7 @@ export async function generateCommentary(input: GenerateCommentaryInput): Promis
 const prompt = ai.definePrompt({
   name: 'generateCommentaryPrompt',
   input: {schema: GenerateCommentaryInputSchema},
-  output: {schema: GenerateCommentaryOutputSchema},
+  output: {schema: GenerateCommentaryOutputSchema.pick({ commentary: true })},
   prompt: `You are an expert, high-energy Kabaddi commentator. Your job is to provide exciting, concise commentary for live match events. Keep it short and punchy, like a real-time update. Use the provided context to make your commentary more descriptive.
 
   Match Context:
@@ -117,26 +118,27 @@ const generateCommentaryFlow = ai.defineFlow(
 
     let attempts = 0;
     const maxAttempts = 3;
-    let lastError: any;
 
     while (attempts < maxAttempts) {
       try {
         const {output} = await prompt(processedInput);
         return output!;
       } catch (error: any) {
-        lastError = error;
         // Do not retry on 429 quota errors
         if (error.message && error.message.includes('429')) {
-            throw lastError;
+             return { error: error.message };
         }
         attempts++;
         if (attempts < maxAttempts) {
           // Wait for a short period with exponential backoff before retrying
           await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts - 1)));
+        } else {
+           // If all attempts fail, return the error.
+           return { error: error.message };
         }
       }
     }
-    // If all attempts fail, throw the last captured error.
-    throw lastError;
+    // This should not be reached, but as a fallback
+    return { error: 'An unknown error occurred after multiple retries.' };
   }
 );

@@ -115,23 +115,30 @@ export default function Home() {
         
         const result = await generateCommentary(commentaryInput);
         if (result && result.commentary) {
-            setCommentaryLog(prev => [result.commentary, ...prev]);
-        }
-    } catch (error: any) {
-        console.error("Error generating commentary:", error);
-        if (error.message && error.message.includes('429')) {
+            setCommentaryLog(prev => [result.commentary!, ...prev]);
+        } else if (result && result.error) {
+           console.error("Error generating commentary:", result.error);
+           if (result.error.includes('429')) {
              toast({
                 title: "AI Commentary Limit Reached",
                 description: "The daily free limit for the AI commentary service has been reached. It will be available again tomorrow.",
                 variant: "destructive",
             });
-        } else {
-            toast({
+           } else {
+             toast({
                 title: "AI Commentator Overloaded",
                 description: "The AI commentary service is currently experiencing high demand. Please try again in a moment.",
                 variant: "destructive",
             });
+           }
         }
+    } catch (error: any) {
+        console.error("Unhandled error in addCommentary:", error);
+        toast({
+            title: "An Unexpected Error Occurred",
+            description: "Could not fetch commentary due to an unexpected issue.",
+            variant: "destructive",
+        });
     } finally {
         setIsCommentaryLoading(false);
     }
@@ -952,5 +959,3 @@ export default function Home() {
     </>
   );
 }
-
-    
