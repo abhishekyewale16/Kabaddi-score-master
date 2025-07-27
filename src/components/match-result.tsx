@@ -28,13 +28,13 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
     if (isMatchOver) {
         if (team1.score > team2.score) {
             setWinner(team1);
-            setResultText(team1.name);
+            setResultText(`Match Over! ${team1.name} winner`);
         } else if (team2.score > team1.score) {
             setWinner(team2);
-            setResultText(team2.name);
+            setResultText(`Match Over! ${team2.name} winner`);
         } else {
             setWinner(null);
-            setResultText("Match Drawn");
+            setResultText("Match Over! Match Drawn");
         }
         setIsOpen(true);
     } else {
@@ -49,17 +49,13 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
           <DialogHeader className="text-center z-10">
             <DialogTitle className="text-2xl font-bold text-primary flex items-center justify-center gap-2">
               <Trophy className="w-8 h-8" />
-              Match Over!
+              Final Result
             </DialogTitle>
-            <DialogDescription className="text-lg">The final result is in.</DialogDescription>
           </DialogHeader>
           <div className="text-center z-10 py-8">
             <p className="text-4xl md:text-5xl font-extrabold text-primary break-words">
               {resultText}
             </p>
-            {winner && (
-                <p className="text-lg font-semibold text-primary/80">WINNER</p>
-            )}
             <p className="text-3xl font-bold mt-4">
               <span className={winner?.id === team1.id ? 'text-primary' : ''}>{team1.score}</span>
               <span> - </span>
