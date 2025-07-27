@@ -39,17 +39,19 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-card border-border">
           <DialogHeader className="text-center z-10">
-            <DialogTitle className="text-2xl font-bold text-primary flex items-center justify-center gap-2">
-              <Trophy className="w-8 h-8" />
+            <DialogTitle className="text-xl font-bold text-card-foreground flex items-center justify-center gap-2">
+              <Trophy className="w-6 h-6 text-primary" />
               Final Result
             </DialogTitle>
           </DialogHeader>
-          <div className="text-center z-10 py-8">
-            <p className="text-4xl md:text-5xl font-extrabold text-primary break-words">
-              {resultText}
-            </p>
+          <div className="text-center z-10 py-6">
+             <div className="inline-block bg-primary/10 border-2 border-primary rounded-lg px-8 py-4">
+                <p className="text-2xl md:text-3xl font-black text-primary break-words">
+                  {resultText}
+                </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

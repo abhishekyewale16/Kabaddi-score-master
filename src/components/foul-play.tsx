@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
 
@@ -87,7 +87,7 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning, isMatchOver }: Fo
   }
 
   return (
-    <Card>
+    <Card className="bg-card border-none">
       <CardContent className="p-6">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -200,5 +200,3 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning, isMatchOver }: Fo
     </Card>
   );
 }
-
-    

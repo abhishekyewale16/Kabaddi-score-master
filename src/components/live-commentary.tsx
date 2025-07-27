@@ -14,7 +14,7 @@ interface LiveCommentaryProps {
 
 export function LiveCommentary({ commentaryLog, isLoading, onExportCommentary }: LiveCommentaryProps) {
   return (
-    <Card>
+    <Card className="bg-card border-none">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-3">
           <Mic className="text-primary" />

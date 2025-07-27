@@ -170,7 +170,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden bg-card border-none">
       <CardHeader className="p-4 bg-card-foreground/5">
         <CardTitle className="text-center text-lg md:text-xl font-semibold flex items-center justify-center gap-2">
           <Trophy className="w-5 h-5 text-primary" />
@@ -193,7 +193,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
           />
           
           <div className="flex flex-col items-center order-first md:order-none">
-            <div className="text-5xl md:text-6xl font-bold tracking-tighter">
+            <div className="text-5xl md:text-6xl font-black tracking-tighter">
               <span className="text-foreground transition-all duration-300">{teams[0].score}</span>
               <span className="text-muted-foreground mx-2">:</span>
               <span className="text-foreground transition-all duration-300">{teams[1].score}</span>

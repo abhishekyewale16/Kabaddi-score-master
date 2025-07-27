@@ -265,7 +265,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus', 'line-out'].includes(selectedPointType);
 
   return (
-    <Card>
+    <Card className="bg-card border-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
           <ClipboardPlus className="text-primary" />
@@ -569,9 +569,3 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
-
-    
-
-    
-
-    

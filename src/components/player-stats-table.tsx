@@ -85,7 +85,7 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
 
   return (
     <TableRow className={cn(!player.isPlaying && "opacity-60", player.isOut && "opacity-50 bg-muted/50", player.isRedCarded && "bg-destructive/20 opacity-40", player.suspensionTimer > 0 && "bg-yellow-400/20")}>
-      <TableCell className={cn("font-medium", player.isPlaying && !player.isOut && !player.isRedCarded && player.suspensionTimer === 0 && "bg-destructive/10")}>
+      <TableCell className={cn("font-medium", player.isPlaying && !player.isOut && !player.isRedCarded && player.suspensionTimer === 0 && "bg-primary/10")}>
         <Input
           type="text"
           value={name}
