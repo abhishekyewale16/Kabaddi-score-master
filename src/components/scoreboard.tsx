@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download, Clock, Hourglass } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download, Clock, Hourglass, FlagCheckered } from 'lucide-react';
 import type { Team } from '@/lib/types';
 import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -145,8 +145,11 @@ interface ScoreboardProps {
   raidingTeamId: number;
   matchDuration: number;
   isMatchPristine: boolean;
+  isTimeUp: boolean;
+  isMatchOver: boolean;
   onToggleTimer: () => void;
   onResetTimer: () => void;
+  onEndMatch: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
   onTeamCoachChange: (teamId: number, newCoach: string) => void;
   onTeamCityChange: (teamId: number, newCity: string) => void;
@@ -154,16 +157,13 @@ interface ScoreboardProps {
   onTakeTimeout: (teamId: number) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange, onTakeTimeout, isMatchPristine }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onEndMatch, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange, onTakeTimeout, isMatchPristine, isTimeUp, isMatchOver }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
-  const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
-  const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
-  const isMatchOver = isSecondHalfOver;
 
   let buttonText = timer.isRunning ? 'Pause' : 'Start';
   if (timer.isTimeout) {
       buttonText = 'Resume';
-  } else if (isFirstHalfOver) {
+  } else if (timer.half === 1 && isTimeUp) {
     buttonText = 'Start Half 2';
   } else if (isMatchOver) {
     buttonText = 'Match Over';
@@ -199,6 +199,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
               <span className="text-foreground transition-all duration-300">{teams[1].score}</span>
             </div>
              {timer.isTimeout && <Badge variant="secondary" className="mt-2">TIMEOUT</Badge>}
+             {isTimeUp && !isMatchOver && <Badge variant="destructive" className="mt-2">TIME UP - COMPLETE FINAL RAID</Badge>}
             <div className="flex items-center gap-4 mt-4">
               <div className="text-xl font-semibold flex items-center gap-2">
                 <Timer className="w-5 h-5" />
@@ -206,7 +207,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
               </div>
               <Separator orientation="vertical" className="h-6" />
               <div className="text-lg font-medium text-muted-foreground">
-                {isMatchOver ? "Match Over" : `Half ${timer.half}`}
+                {isMatchOver ? "Final" : `Half ${timer.half}`}
               </div>
             </div>
           </div>
@@ -241,10 +242,16 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
                 </div>
             )}
             <div className="flex justify-center gap-2">
-                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver && !timer.isTimeout}>
+                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver || (isTimeUp && timer.half === 2) }>
                     {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                     {buttonText}
                 </Button>
+                {isTimeUp && timer.half === 2 && !isMatchOver && (
+                    <Button onClick={onEndMatch} size="sm" variant="destructive">
+                        <FlagCheckered className="mr-2 h-4 w-4" />
+                        End Match
+                    </Button>
+                )}
                 <Button onClick={onResetTimer} variant="outline" size="sm">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Reset
@@ -255,3 +262,5 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
     </Card>
   );
 }
+
+    

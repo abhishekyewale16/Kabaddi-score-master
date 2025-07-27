@@ -40,6 +40,7 @@ interface FoulPlayProps {
   teams: [Team, Team];
   onIssueCard: (data: { teamId: number; playerId: number; cardType: 'green' | 'yellow' | 'red' }) => void;
   isTimerRunning: boolean;
+  isMatchOver: boolean;
 }
 
 const formSchema = z.object({
@@ -48,7 +49,7 @@ const formSchema = z.object({
   playerId: z.string().min(1, { message: "Player selection is required." }),
 });
 
-export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) {
+export function FoulPlay({ teams, onIssueCard, isTimerRunning, isMatchOver }: FoulPlayProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast()
 
@@ -90,7 +91,7 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) 
       <CardContent className="p-6">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="destructive" className="w-full" disabled={!isTimerRunning}>Issue Card</Button>
+            <Button variant="destructive" className="w-full" disabled={!isTimerRunning || isMatchOver}>Issue Card</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -199,3 +200,5 @@ export function FoulPlay({ teams, onIssueCard, isTimerRunning }: FoulPlayProps) 
     </Card>
   );
 }
+
+    

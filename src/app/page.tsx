@@ -45,6 +45,9 @@ export default function Home() {
   const [matchDuration, setMatchDuration] = useState(INITIAL_MATCH_DURATION);
   const [substitutionsMadeThisBreak, setSubstitutionsMadeThisBreak] = useState<SubstitutionState>({ team1: 0, team2: 0 });
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isMatchOver, setIsMatchOver] = useState(false);
+
   const [timer, setTimer] = useState({
     minutes: INITIAL_MATCH_DURATION,
     seconds: 0,
@@ -67,6 +70,8 @@ export default function Home() {
         setMatchDuration(savedState.matchDuration);
         setMatchEvents(savedState.matchEvents);
         setTimer(savedState.timer);
+        setIsTimeUp(savedState.isTimeUp);
+        setIsMatchOver(savedState.isMatchOver);
       }
     } catch (error) {
       console.error("Failed to load state from localStorage", error);
@@ -86,16 +91,17 @@ export default function Home() {
         matchDuration,
         matchEvents,
         timer,
+        isTimeUp,
+        isMatchOver,
       };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
       console.error("Failed to save state to localStorage", error);
     }
-  }, [teams, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isLoaded]);
+  }, [teams, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isTimeUp, isMatchOver, isLoaded]);
 
-  const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0);
+  const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0 && !isTimeUp);
   const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
-  const isMatchOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
 
   const switchRaidingTeam = useCallback(() => {
     setRaidingTeamId(prev => (prev === 1 ? 2 : 1));
@@ -157,9 +163,15 @@ export default function Home() {
           if (prev.minutes > 0) {
             return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
           }
+          
+          // Time is up
+          if(prev.half === 1 || prev.half === 2) {
+              setIsTimeUp(true);
+          }
           if (prev.half === 1) {
              setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
           }
+
           return { ...prev, isRunning: false };
         });
 
@@ -205,10 +217,7 @@ export default function Home() {
   }, [teams, toast]);
   
   const handleToggleTimer = useCallback(() => {
-    const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
-    const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
-
-    if (isSecondHalfOver) return; 
+    if (isMatchOver) return; 
 
     if (timer.isTimeout) {
       setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
@@ -220,7 +229,7 @@ export default function Home() {
       return;
     }
 
-    if (isFirstHalfOver) {
+    if (timer.half === 1 && isTimeUp) {
       setTimer({
         minutes: matchDuration,
         seconds: 0,
@@ -228,13 +237,19 @@ export default function Home() {
         half: 2,
         isTimeout: false,
       });
+      setIsTimeUp(false);
       setTeams(prevTeams => prevTeams.map(t => ({...t, timeoutsRemaining: 2})) as [Team, Team]);
       setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
 
     } else {
       setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
     }
-  }, [timer, matchDuration, toast]);
+  }, [timer, isTimeUp, isMatchOver, matchDuration, toast]);
+  
+  const handleEndMatch = () => {
+      setIsMatchOver(true);
+      setTimer(prev => ({...prev, isRunning: false}));
+  }
 
   const handleResetTimer = useCallback(() => {
     // Clear state from localStorage first
@@ -257,6 +272,8 @@ export default function Home() {
     setCommentaryLog([]);
     setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
     setMatchEvents([]);
+    setIsTimeUp(false);
+    setIsMatchOver(false);
     const newInitialTeams = JSON.parse(JSON.stringify(initialTeams));
     newInitialTeams.forEach((team: Team) => team.timeoutsRemaining = 2);
     setTeams(newInitialTeams);
@@ -930,6 +947,9 @@ export default function Home() {
                 onMatchDurationChange={handleMatchDurationChange}
                 onTakeTimeout={handleTakeTimeout}
                 isMatchPristine={isMatchPristine}
+                isTimeUp={isTimeUp}
+                isMatchOver={isMatchOver}
+                onEndMatch={handleEndMatch}
               />
             </div>
             <div className="lg:col-span-1 space-y-8">
@@ -939,9 +959,10 @@ export default function Home() {
                   onAddScore={handleAddScore} 
                   onEmptyRaid={handleEmptyRaid}
                   onSwitchRaidingTeam={switchRaidingTeam}
-                  isTimerRunning={timer.isRunning}
+                  isTimerRunning={timer.isRunning || isTimeUp}
+                  isMatchOver={isMatchOver}
                 />
-                <FoulPlay teams={teams} onIssueCard={handleIssueCard} isTimerRunning={timer.isRunning} />
+                <FoulPlay teams={teams} onIssueCard={handleIssueCard} isTimerRunning={timer.isRunning || isTimeUp} isMatchOver={isMatchOver} />
             </div>
           </div>
 
@@ -952,7 +973,7 @@ export default function Home() {
               <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team2} />
           </div>
           <div className="mt-8 flex justify-center">
-              <Button onClick={handleExportStats} size="lg">
+              <Button onClick={handleExportStats} size="lg" disabled={!isMatchOver}>
                   <Download className="mr-2 h-4 w-4" />
                   Export Stats to Excel
               </Button>
@@ -966,3 +987,5 @@ export default function Home() {
     </>
   );
 }
+
+    

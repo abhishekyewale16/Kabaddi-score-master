@@ -44,6 +44,7 @@ interface ScoringControlsProps {
   onEmptyRaid: (teamId: number, playerId: number) => void;
   onSwitchRaidingTeam: () => void;
   isTimerRunning: boolean;
+  isMatchOver: boolean;
 }
 
 const formSchema = z.object({
@@ -100,7 +101,7 @@ const emptyRaidSchema = z.object({
 });
 
 
-export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam, isTimerRunning }: ScoringControlsProps) {
+export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam, isTimerRunning, isMatchOver }: ScoringControlsProps) {
   const [open, setOpen] = useState(false);
   const [emptyRaidDialogOpen, setEmptyRaidDialogOpen] = useState(false);
   const [isBonusAvailable, setIsBonusAvailable] = useState(false);
@@ -274,7 +275,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       <CardContent className="flex flex-col gap-2">
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
-            <Button className="w-full" disabled={!isTimerRunning}>Add Score Event</Button>
+            <Button className="w-full" disabled={!isTimerRunning || isMatchOver}>Add Score Event</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -517,7 +518,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
         <Dialog open={emptyRaidDialogOpen} onOpenChange={setEmptyRaidDialogOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" className="w-full" disabled={!isTimerRunning}>
+                <Button variant="outline" className="w-full" disabled={!isTimerRunning || isMatchOver}>
                     <Ban className="mr-2 h-4 w-4" />
                     Empty Raid
                 </Button>
@@ -559,7 +560,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
             </DialogContent>
         </Dialog>
 
-        <Button variant="ghost" className="w-full" onClick={onSwitchRaidingTeam} disabled={!isTimerRunning}>
+        <Button variant="ghost" className="w-full" onClick={onSwitchRaidingTeam} disabled={!isTimerRunning || isMatchOver}>
           <Replace className="mr-2 h-4 w-4" />
           Switch Raiding Team
         </Button>
@@ -568,6 +569,8 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
 
     
 
