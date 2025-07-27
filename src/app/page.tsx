@@ -16,6 +16,7 @@ import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { FoulPlay } from '@/components/foul-play';
+import { MatchResult } from '@/components/match-result';
 
 
 const INITIAL_MATCH_DURATION = 20;
@@ -94,6 +95,7 @@ export default function Home() {
 
   const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0);
   const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
+  const isMatchOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
 
   const switchRaidingTeam = useCallback(() => {
     setRaidingTeamId(prev => (prev === 1 ? 2 : 1));
@@ -942,6 +944,7 @@ export default function Home() {
             </div>
           </div>
 
+          <MatchResult teams={teams} isMatchOver={isMatchOver} />
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
               <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team1} />
