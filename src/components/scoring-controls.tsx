@@ -53,7 +53,7 @@ const formSchema = z.object({
   playerId: z.string().optional(),
   eliminatedPlayerIds: z.array(z.number()).optional(),
 }).refine(data => {
-  if (['raid', 'tackle', 'raid-bonus'].includes(data.pointType)) {
+  if (['raid', 'tackle', 'raid-bonus', 'bonus'].includes(data.pointType)) {
     return data.playerId && data.playerId.length > 0;
   }
   return true;
@@ -141,10 +141,12 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   );
 
   useEffect(() => {
+    const playersOnMat = defendingTeam.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded).length;
     const activeDefenders = activeDefendingPlayers.length ?? 0;
-    setIsBonusAvailable(activeDefenders >= 6);
+
+    setIsBonusAvailable(playersOnMat >= 6);
     setIsSuperTacklePossible(activeDefenders <= 3 && activeDefenders > 0);
-  }, [activeDefendingPlayers]);
+  }, [defendingTeam, activeDefendingPlayers]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
