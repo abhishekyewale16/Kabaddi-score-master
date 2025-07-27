@@ -36,5 +36,3 @@ export interface MatchEvent {
   time: string; // e.g., "15:30"
   details: string;
 }
-
-    

@@ -73,7 +73,7 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
             {isDraw && (
               <div className="inline-block bg-muted/50 border-2 border-border rounded-lg px-8 py-4">
                   <p className="text-lg md:text-xl font-bold text-foreground">
-                    The match is a Draw!
+                    Match Drawn
                   </p>
               </div>
             )}
