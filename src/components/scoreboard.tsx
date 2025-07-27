@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download, Clock, Hourglass, Flag } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Clock, Hourglass, Flag } from 'lucide-react';
 import type { Team } from '@/lib/types';
 import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -217,7 +217,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
             raidCount={raidState.team2} 
             isRaiding={raidingTeamId === teams[1].id} 
             alignment="right" 
-            onNameChange={onTeamNamechange} 
+            onNameChange={onTeamNameChange} 
             onCoachChange={onTeamCoachChange} 
             onCityChange={onTeamCityChange} 
             onTakeTimeout={onTakeTimeout}
