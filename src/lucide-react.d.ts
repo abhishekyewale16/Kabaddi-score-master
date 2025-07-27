@@ -36,7 +36,5 @@ declare module 'lucide-react' {
     export const ShieldAlert: Icon;
     export const ShieldOff: Icon;
     export const AlertCircle: Icon;
-    export const FlagCheckered: Icon;
+    export const Flag: Icon;
 }
-
-    
