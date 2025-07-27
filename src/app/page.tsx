@@ -416,7 +416,9 @@ export default function Home() {
             newTeams[scoringTeamIndex].score += 2;
             
             newTeams[teamIndexForLona].players.forEach(player => {
-                player.isOut = false;
+                if (!player.isRedCarded && player.suspensionTimer === 0) {
+                   player.isOut = false;
+                }
             });
     
             toast({
@@ -929,7 +931,6 @@ export default function Home() {
                 onTakeTimeout={handleTakeTimeout}
                 isMatchPristine={isMatchPristine}
               />
-               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
             </div>
             <div className="lg:col-span-1 space-y-8">
                 <ScoringControls 
@@ -955,6 +956,9 @@ export default function Home() {
                   <Download className="mr-2 h-4 w-4" />
                   Export Stats to Excel
               </Button>
+          </div>
+          <div className="mt-8">
+            <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
           </div>
         </div>
       </main>
