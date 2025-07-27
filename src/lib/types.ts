@@ -16,6 +16,7 @@ export interface Player {
   yellowCards: number;
   isRedCarded: boolean;
   suspensionTimer: number; // in seconds
+  isCaptain?: boolean;
 }
 
 export interface Team {

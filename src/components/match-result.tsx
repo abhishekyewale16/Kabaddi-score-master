@@ -18,28 +18,33 @@ interface MatchResultProps {
 
 export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
   const [team1, team2] = teams;
-  const [resultText, setResultText] = useState('');
+  const [winner, setWinner] = useState<Team | null>(null);
+  const [isDraw, setIsDraw] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (isMatchOver) {
-        let winner: Team | null = null;
+        let winningTeam: Team | null = null;
         if (team1.score > team2.score) {
-            winner = team1;
+            winningTeam = team1;
         } else if (team2.score > team1.score) {
-            winner = team2;
+            winningTeam = team2;
         }
 
-        if (winner) {
-            setResultText(`${winner.name} are the Winners! Congratulations to Coach ${winner.coach} and the captain.`);
+        if (winningTeam) {
+            setWinner(winningTeam);
+            setIsDraw(false);
         } else {
-            setResultText("The match is a Draw!");
+            setWinner(null);
+            setIsDraw(true);
         }
         setIsOpen(true);
     } else {
         setIsOpen(false);
     }
   }, [isMatchOver, teams, team1, team2]);
+
+  const captainName = winner?.players.find(p => p.isCaptain)?.name ?? 'Captain';
 
   return (
     <>
@@ -52,11 +57,26 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
             </DialogTitle>
           </DialogHeader>
           <div className="text-center z-10 py-6">
-             <div className="inline-block bg-primary/10 border-2 border-primary rounded-lg px-8 py-4">
+            {winner && (
+              <div className="inline-block bg-primary/10 border-2 border-primary rounded-lg px-8 py-4 space-y-2">
                 <p className="text-lg md:text-xl font-bold text-primary break-words px-4">
-                  {resultText}
+                  {winner.name}
                 </p>
-            </div>
+                <p className="text-4xl md:text-5xl font-black text-primary tracking-tight">
+                  Winner!
+                </p>
+                <p className="text-xs text-foreground pt-2">
+                  Congratulations Coach ({winner.coach}) and Captain ({captainName}).
+                </p>
+              </div>
+            )}
+            {isDraw && (
+              <div className="inline-block bg-muted/50 border-2 border-border rounded-lg px-8 py-4">
+                  <p className="text-lg md:text-xl font-bold text-foreground">
+                    The match is a Draw!
+                  </p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

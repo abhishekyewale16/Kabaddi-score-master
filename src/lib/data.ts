@@ -26,6 +26,7 @@ export const initialTeams: [Team, Team] = [
       yellowCards: 0,
       isRedCarded: false,
       suspensionTimer: 0,
+      isCaptain: i === 0, // First player is captain
     })),
   },
   {
@@ -52,6 +53,7 @@ export const initialTeams: [Team, Team] = [
       yellowCards: 0,
       isRedCarded: false,
       suspensionTimer: 0,
+      isCaptain: i === 0, // First player is captain
     })),
   },
 ];
