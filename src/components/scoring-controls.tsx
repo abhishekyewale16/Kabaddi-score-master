@@ -142,10 +142,13 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
   useEffect(() => {
     const playersOnMat = defendingTeam.players.filter(p => p.isPlaying && !p.isOut && !p.isRedCarded).length;
-    const activeDefenders = activeDefendingPlayers.length ?? 0;
+    const suspendedDefenders = defendingTeam.players.filter(p => p.suspensionTimer > 0).length;
+    const totalDefendersForBonus = playersOnMat + suspendedDefenders;
+    
+    setIsBonusAvailable(totalDefendersForBonus >= 6);
 
-    setIsBonusAvailable(playersOnMat >= 6);
-    setIsSuperTacklePossible(activeDefenders <= 3 && activeDefenders > 0);
+    const activeDefendersForSuperTackle = activeDefendingPlayers.length ?? 0;
+    setIsSuperTacklePossible(activeDefendersForSuperTackle <= 3 && activeDefendersForSuperTackle > 0);
   }, [defendingTeam, activeDefendingPlayers]);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -565,5 +568,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     </Card>
   );
 }
+
+    
 
     
