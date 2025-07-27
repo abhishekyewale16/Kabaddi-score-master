@@ -655,6 +655,32 @@ export default function Home() {
     );
   }, []);
 
+  const handleSetCaptain = useCallback((teamId: number, playerId: number) => {
+    setTeams(currentTeams =>
+      currentTeams.map(team => {
+        if (team.id === teamId) {
+          return {
+            ...team,
+            players: team.players.map(player => ({
+                ...player,
+                isCaptain: player.id === playerId,
+            })),
+          };
+        }
+        return team;
+      }) as [Team, Team]
+    );
+    const team = teams.find(t => t.id === teamId);
+    const player = team?.players.find(p => p.id === playerId);
+    if(team && player) {
+        toast({
+            title: "Captain Updated",
+            description: `${player.name} is now the captain of ${team.name}.`
+        });
+    }
+  }, [teams, toast]);
+
+
   const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
     const teamKey = teamId === 1 ? 'team1' : 'team2';
     if (!isSubstitutionPeriod) {
@@ -829,6 +855,7 @@ export default function Home() {
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
+            "Captain": p.isCaptain ? 'C' : '',
             "Status": p.isRedCarded ? 'Red Card' : p.suspensionTimer > 0 ? `Suspended (${p.suspensionTimer}s)` : p.isOut ? 'Out' : p.isPlaying ? 'Active' : 'Bench',
             "Total Points": p.totalPoints,
             "Raid Points": p.raidPoints,
@@ -859,7 +886,7 @@ export default function Home() {
         
         ws['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
 
-        const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A5:K5');
+        const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A5:M5');
         for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: 4, c: C });
             if (ws[cellAddress]) {
@@ -969,8 +996,8 @@ export default function Home() {
           <MatchResult teams={teams} isMatchOver={isMatchOver} />
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team1} />
-              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team2} />
+              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} onSetCaptain={handleSetCaptain} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team1} />
+              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} onSetCaptain={handleSetCaptain} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team2} />
           </div>
           <div className="mt-8 flex justify-center">
               <Button onClick={handleExportStats} size="lg" disabled={!isMatchOver}>

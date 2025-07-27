@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User, RefreshCw, AlertCircle, ShieldOff } from 'lucide-react';
+import { User, RefreshCw, AlertCircle, ShieldOff, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from './ui/dialog';
@@ -26,10 +26,11 @@ interface PlayerRowProps {
   team: Team;
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
   onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
+  onSetCaptain: (teamId: number, playerId: number) => void;
   isSubstitutionAllowed: boolean;
 }
 
-const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSubstitutionAllowed }: PlayerRowProps) => {
+const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, onSetCaptain, isSubstitutionAllowed }: PlayerRowProps) => {
   const [name, setName] = useState(player.name);
   const [substituteOpen, setSubstituteOpen] = useState(false);
   const [playerToSubstitute, setPlayerToSubstitute] = useState('');
@@ -85,6 +86,11 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSub
 
   return (
     <TableRow className={cn(!player.isPlaying && "opacity-60", player.isOut && "opacity-50 bg-muted/50", player.isRedCarded && "bg-destructive/20 opacity-40", player.suspensionTimer > 0 && "bg-yellow-400/20")}>
+      <TableCell className="text-center">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onSetCaptain(team.id, player.id)}>
+          <Star className={cn("w-4 h-4 text-muted-foreground", player.isCaptain && "fill-yellow-400 text-yellow-400")} />
+        </Button>
+      </TableCell>
       <TableCell className={cn("font-medium", player.isPlaying && !player.isOut && !player.isRedCarded && player.suspensionTimer === 0 && "bg-primary/10")}>
         <Input
           type="text"
@@ -147,11 +153,12 @@ interface PlayerStatsTableProps {
   team: Team;
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
   onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
+  onSetCaptain: (teamId: number, playerId: number) => void;
   isSubstitutionAllowed: boolean;
   substitutionsMade: number;
 }
 
-export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer, isSubstitutionAllowed, substitutionsMade }: PlayerStatsTableProps) {
+export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer, onSetCaptain, isSubstitutionAllowed, substitutionsMade }: PlayerStatsTableProps) {
   const canSubstitute = isSubstitutionAllowed && substitutionsMade < 2;
   
   const getSubDescription = () => {
@@ -178,6 +185,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer,
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px] text-center"><Star className="w-4 h-4 inline-block" /></TableHead>
                 <TableHead className="w-[150px] bg-muted/50 font-bold">Player</TableHead>
                 <TableHead className="text-center w-[180px]">Status</TableHead>
                 <TableHead className="text-center">Total Points</TableHead>
@@ -195,6 +203,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer,
                   team={team}
                   onPlayerNameChange={onPlayerNameChange} 
                   onSubstitutePlayer={onSubstitutePlayer}
+                  onSetCaptain={onSetCaptain}
                   isSubstitutionAllowed={canSubstitute}
                 />
               ))}
