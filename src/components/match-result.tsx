@@ -23,12 +23,17 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
 
   useEffect(() => {
     if (isMatchOver) {
+        let winner: Team | null = null;
         if (team1.score > team2.score) {
-            setResultText(`${team1.name} Won`);
+            winner = team1;
         } else if (team2.score > team1.score) {
-            setResultText(`${team2.name} Won`);
+            winner = team2;
+        }
+
+        if (winner) {
+            setResultText(`${winner.name} are the Winners! Congratulations to Coach ${winner.coach} and the captain.`);
         } else {
-            setResultText("Match Drawn");
+            setResultText("The match is a Draw!");
         }
         setIsOpen(true);
     } else {
@@ -48,7 +53,7 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
           </DialogHeader>
           <div className="text-center z-10 py-6">
              <div className="inline-block bg-primary/10 border-2 border-primary rounded-lg px-8 py-4">
-                <p className="text-2xl md:text-3xl font-black text-primary break-words">
+                <p className="text-lg md:text-xl font-bold text-primary break-words px-4">
                   {resultText}
                 </p>
             </div>
