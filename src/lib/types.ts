@@ -12,6 +12,7 @@ export interface Player {
   superTacklePoints: number;
   isPlaying: boolean;
   isOut: boolean; // true if player is temporarily out of the match
+  outTimestamp: number | null; // Timestamp when player got out
   greenCards: number;
   yellowCards: number;
   isRedCarded: boolean;

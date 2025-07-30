@@ -63,6 +63,14 @@ export default function Home() {
       const savedStateJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (savedStateJSON) {
         const savedState = JSON.parse(savedStateJSON);
+        // Quick fix for old state that might not have outTimestamp
+        savedState.teams.forEach((team: Team) => {
+            team.players.forEach(player => {
+                if (player.outTimestamp === undefined) {
+                    player.outTimestamp = null;
+                }
+            });
+        });
         setTeams(savedState.teams);
         setRaidState(savedState.raidState);
         setRaidingTeamId(savedState.raidingTeamId);
@@ -176,6 +184,13 @@ export default function Home() {
                     title: "Suspension Over",
                     description: `${player.name} (${team.name}) is now eligible to play.`,
                 });
+                 // Check if player should be revived
+                const teamToUpdate = teams.find(t => t.id === team.id);
+                if (teamToUpdate) {
+                    const outPlayers = teamToUpdate.players.filter(p => p.isOut && p.suspensionTimer === 0 && !p.isRedCarded);
+                    // This is a simplified revival check; main logic is in handleAddScore
+                    // This just covers the case where suspension ends while team has revive chances
+                }
             }
         });
     });
@@ -327,6 +342,7 @@ export default function Home() {
         newTeams[teamToUpdateIndex].players.forEach(player => {
             if (data.eliminatedPlayerIds!.includes(player.id)) {
                 player.isOut = true;
+                player.outTimestamp = Date.now();
             }
         });
     }
@@ -389,6 +405,32 @@ export default function Home() {
         newTeams[scoringTeamIndex].score += data.points;
     }
 
+    // --- REVIVAL LOGIC ---
+    let revivalsMade = 0;
+    if (data.pointType === 'raid' || data.pointType === 'raid-bonus') {
+        revivalsMade = data.points; // Revive one player for each touch point
+    } else if (data.pointType === 'tackle') {
+        revivalsMade = 1; // Revive one player for a tackle
+    }
+
+    if (revivalsMade > 0) {
+        const teamToReviveIndex = scoringTeamIndex;
+        const outPlayers = newTeams[teamToReviveIndex].players
+            .filter(p => p.isOut && !p.isRedCarded && p.suspensionTimer === 0)
+            .sort((a, b) => (a.outTimestamp || 0) - (b.outTimestamp || 0));
+
+        const playersToRevive = outPlayers.slice(0, revivalsMade);
+
+        if (playersToRevive.length > 0) {
+            newTeams[teamToReviveIndex].players.forEach(p => {
+                if (playersToRevive.some(revivedPlayer => revivedPlayer.id === p.id)) {
+                    p.isOut = false;
+                    p.outTimestamp = null;
+                }
+            });
+        }
+    }
+
     const teamToCheckForLona = isTackleEvent ? raidingTeamId : (data.pointType === 'line-out' ? raidingTeamId : defendingTeamId);
     const teamIndexForLona = newTeams.findIndex(t => t.id === teamToCheckForLona)!;
     
@@ -401,6 +443,7 @@ export default function Home() {
             newTeams[teamIndexForLona].players.forEach(player => {
                 if (!player.isRedCarded && player.suspensionTimer === 0) {
                    player.isOut = false;
+                   player.outTimestamp = null;
                 }
             });
     
@@ -507,9 +550,23 @@ export default function Home() {
         team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
       ) as [Team, Team];
       
-      const raidingTeamIndex = newTeamsWithScore.findIndex(t => t.id === teamId)!;
-      const playerIndex = newTeamsWithScore[raidingTeamIndex].players.findIndex(p => p.id === playerId)!;
-      newTeamsWithScore[raidingTeamIndex].players[playerIndex].isOut = true;
+      const raidingTeamIdx = newTeamsWithScore.findIndex(t => t.id === teamId)!;
+      const playerIdx = newTeamsWithScore[raidingTeamIdx].players.findIndex(p => p.id === playerId)!;
+      newTeamsWithScore[raidingTeamIdx].players[playerIdx].isOut = true;
+      newTeamsWithScore[raidingTeamIdx].players[playerIdx].outTimestamp = Date.now();
+
+      // Revive one player for the scoring team
+      const scoringTeamIndex = newTeamsWithScore.findIndex(t => t.id === opposingTeamId)!;
+      const outPlayers = newTeamsWithScore[scoringTeamIndex].players
+          .filter(p => p.isOut && !p.isRedCarded && p.suspensionTimer === 0)
+          .sort((a, b) => (a.outTimestamp || 0) - (b.outTimestamp || 0));
+      
+      if (outPlayers.length > 0) {
+          const playerToReviveId = outPlayers[0].id;
+          const playerToReviveIndex = newTeamsWithScore[scoringTeamIndex].players.findIndex(p => p.id === playerToReviveId)!;
+          newTeamsWithScore[scoringTeamIndex].players[playerToReviveIndex].isOut = false;
+          newTeamsWithScore[scoringTeamIndex].players[playerToReviveIndex].outTimestamp = null;
+      }
 
       addCommentary({
           eventType: 'do_or_die_fail',

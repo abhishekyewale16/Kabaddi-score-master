@@ -22,6 +22,7 @@ export const initialTeams: [Team, Team] = [
       superTacklePoints: 0,
       isPlaying: i < 7, // First 7 players are active
       isOut: false,
+      outTimestamp: null,
       greenCards: 0,
       yellowCards: 0,
       isRedCarded: false,
@@ -49,6 +50,7 @@ export const initialTeams: [Team, Team] = [
       superTacklePoints: 0,
       isPlaying: i < 7, // First 7 players are active
       isOut: false,
+      outTimestamp: null,
       greenCards: 0,
       yellowCards: 0,
       isRedCarded: false,
