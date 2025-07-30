@@ -596,7 +596,7 @@ export default function Home() {
           eventType: 'empty_raid',
           raidingTeam: raidingTeam.name,
           raiderName: player?.name,
-          raidCount: currentRaids + 1,
+          raidCount: currentRids + 1,
       });
     }
 
@@ -802,15 +802,24 @@ export default function Home() {
     const [team1, team2] = teams;
 
     // --- Match Summary Sheet ---
+    const scoreLabel = isMatchOver ? "Final Score" : "Live Score";
+    const resultLabel = isMatchOver ? "Result" : "Current Leader";
+    let resultValue = "Match In Progress";
+    if (isMatchOver) {
+        resultValue = team1.score > team2.score ? `${team1.name} Won` : team2.score > team1.score ? `${team2.name} Won` : "Match Drawn";
+    } else {
+        resultValue = team1.score > team2.score ? team1.name : team2.score > team1.score ? team2.name : "Scores are level";
+    }
+
     const summaryData = [
       [`${team1.name} vs ${team2.name} - Match Summary`],
       [],
-      ["Final Score"],
+      [scoreLabel],
       [`${team1.name}`, team1.score],
       [`${team2.name}`, team2.score],
       [],
-      ["Result"],
-      [team1.score > team2.score ? `${team1.name} Won` : team2.score > team1.score ? `${team2.name} Won` : "Match Drawn"]
+      [resultLabel],
+      [resultValue]
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     wsSummary["!merges"] = [
@@ -862,7 +871,7 @@ export default function Home() {
         const teamHeader = [
             [team.name],
             [],
-            ["Coach:", team.coach, "", "City:", team.city, "", "Final Score:", team.score],
+            ["Coach:", team.coach, "", "City:", team.city, "", "Score:", team.score],
             []
         ];
 
@@ -908,7 +917,7 @@ export default function Home() {
     
     const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;
     XLSX.writeFile(wb, matchFileName);
-  }, [teams, matchEvents]);
+  }, [teams, matchEvents, isMatchOver]);
 
   const handleExportCommentary = useCallback(() => {
     const doc = new Document({
@@ -989,7 +998,7 @@ export default function Home() {
               <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} onSetCaptain={handleSetCaptain} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team2} />
           </div>
           <div className="mt-8 flex justify-center">
-              <Button onClick={handleExportStats} size="lg" disabled={!isMatchOver}>
+              <Button onClick={handleExportStats} size="lg">
                   <Download className="mr-2 h-4 w-4" />
                   Export Stats to Excel
               </Button>
