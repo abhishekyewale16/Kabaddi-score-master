@@ -471,7 +471,7 @@ export default function Home() {
     
     addCommentary(commentaryData);
     setTeams(newTeams);
-    if (isRaidEvent || isTackleEvent) {
+    if (isRaidEvent || isTackleEvent || data.pointType === 'line-out') {
       switchRaidingTeam();
     }
 }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId, toast]);

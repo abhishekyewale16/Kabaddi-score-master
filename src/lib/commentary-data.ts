@@ -12,16 +12,16 @@ const commentaryTemplates: CommentaryMap = {
     "Points on the board for {{raidingTeam}} thanks to {{raiderName}}'s {{points}}-point raid."
   ],
   tackle_score: [
-    "What a tackle by {{defenderName}} from {{defendingTeam}}! {{raiderName}} is out!",
-    "A rock-solid tackle from {{defenderName}} stops the raid! Point to {{defendingTeam}}.",
-    "Superb defending by {{defenderName}}! {{raiderName}} couldn't escape that one.",
-    "{{defendingTeam}}'s defense holds strong! {{defenderName}} with the tackle on {{raiderName}}.",
-    "The raider is stopped in their tracks! A fantastic tackle by {{defenderName}}."
+    "What a tackle by {{defenderName}} from {{defendingTeam}}! {{raiderName}} is out, and it's {{points}} point(s)!",
+    "A rock-solid tackle from {{defenderName}} stops the raid! {{points}} point(s) to {{defendingTeam}}.",
+    "Superb defending by {{defenderName}}! {{raiderName}} couldn't escape. {{points}} point(s).",
+    "{{defendingTeam}}'s defense holds strong! {{defenderName}} with the tackle on {{raiderName}} for {{points}} point(s).",
+    "The raider is stopped in their tracks! A fantastic tackle by {{defenderName}} for {{points}} point(s)."
   ],
   super_tackle_score: [
-    "SUPER TACKLE! {{defenderName}} leads the charge for {{defendingTeam}} to earn 2 crucial points!",
-    "Incredible defense! A super tackle from {{defendingTeam}} led by {{defenderName}}!",
-    "That's a super tackle! 2 points for {{defendingTeam}} as {{raiderName}} is brought down."
+    "SUPER TACKLE! {{defenderName}} leads the charge for {{defendingTeam}} to earn {{points}} crucial points!",
+    "Incredible defense! A super tackle from {{defendingTeam}} led by {{defenderName}} for {{points}} points!",
+    "That's a super tackle! {{points}} points for {{defendingTeam}} as {{raiderName}} is brought down."
   ],
   empty_raid: [
     "An empty raid from {{raiderName}}. No points for either side.",
@@ -30,13 +30,13 @@ const commentaryTemplates: CommentaryMap = {
     "No risks taken by {{raiderName}} on that raid. It's an empty one."
   ],
   do_or_die_fail: [
-    "Pressure gets to {{raiderName}}! They fail the Do-or-Die raid! A point to {{defendingTeam}}.",
-    "{{raidingTeam}} loses their raider! {{raiderName}} is out on the Do-or-Die raid.",
-    "The defense of {{defendingTeam}} comes out on top in the Do-or-Die raid!"
+    "Pressure gets to {{raiderName}}! They fail the Do-or-Die raid! {{points}} point(s) to {{defendingTeam}}.",
+    "{{raidingTeam}} loses their raider! {{raiderName}} is out on the Do-or-Die raid, giving up {{points}} point(s).",
+    "The defense of {{defendingTeam}} comes out on top in the Do-or-Die raid! They get {{points}} point(s)."
   ],
   line_out: [
-    "{{raiderName}} has stepped out of bounds! That's a point to {{defendingTeam}}.",
-    "A costly mistake by {{raiderName}}! They're out, and {{defendingTeam}} gets a point."
+    "{{raiderName}} has stepped out of bounds! That's {{points}} point(s) to {{defendingTeam}}.",
+    "A costly mistake by {{raiderName}}! They're out, and {{defendingTeam}} gets {{points}} point(s)."
   ],
   technical_point: [
     "A technical point has been awarded to {{raidingTeam}}.",
@@ -59,8 +59,8 @@ const commentaryTemplates: CommentaryMap = {
     "That's an All Out! {{raidingTeam}} inflicts a Lona and bags bonus points!"
   ],
   super_raid: [
-    "SUPER RAID! {{raiderName}} has scored 3 or more points in a single raid! Incredible!",
-    "What an amazing effort! It's a Super Raid by {{raiderName}}!"
+    "SUPER RAID! {{raiderName}} has scored {{points}} points in a single raid! Incredible!",
+    "What an amazing effort! It's a Super Raid by {{raiderName}} for {{points}} points!"
   ],
   bonus: [
     "A bonus point snatched by {{raiderName}}! Clever work from the raider.",
