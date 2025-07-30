@@ -28,6 +28,8 @@ export interface Team {
   score: number;
   players: Player[];
   timeoutsRemaining: number;
+  lonaPoints: number;
+  extraPoints: number;
 }
 
 export interface MatchEvent {

@@ -70,6 +70,12 @@ export default function Home() {
                     player.outTimestamp = null;
                 }
             });
+            if (team.lonaPoints === undefined) {
+                team.lonaPoints = 0;
+            }
+            if (team.extraPoints === undefined) {
+                team.extraPoints = 0;
+            }
         });
         setTeams(savedState.teams);
         setRaidState(savedState.raidState);
@@ -439,6 +445,7 @@ export default function Home() {
         if (activePlayersOnMat === 0) {
             isLona = true;
             newTeams[scoringTeamIndex].score += 2;
+            newTeams[scoringTeamIndex].lonaPoints += 2;
             
             newTeams[teamIndexForLona].players.forEach(player => {
                 if (!player.isRedCarded && player.suspensionTimer === 0) {
@@ -546,9 +553,12 @@ export default function Home() {
       const raidingTeamName = newTeamsWithRaidStat.find(t => t.id === teamId)?.name;
       const scoringTeamName = newTeamsWithRaidStat.find(t => t.id === opposingTeamId)?.name;
       
-      const newTeamsWithScore = newTeamsWithRaidStat.map(team => 
-        team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
-      ) as [Team, Team];
+      const newTeamsWithScore = newTeamsWithRaidStat.map(team => {
+        if (team.id === opposingTeamId) {
+            return { ...team, score: team.score + 1 };
+        }
+        return team;
+      }) as [Team, Team];
       
       const raidingTeamIdx = newTeamsWithScore.findIndex(t => t.id === teamId)!;
       const playerIdx = newTeamsWithScore[raidingTeamIdx].players.findIndex(p => p.id === playerId)!;
@@ -596,7 +606,7 @@ export default function Home() {
           eventType: 'empty_raid',
           raidingTeam: raidingTeam.name,
           raiderName: player?.name,
-          raidCount: currentRids + 1,
+          raidCount: currentRaids + 1,
       });
     }
 
@@ -760,18 +770,23 @@ export default function Home() {
     const opposingTeam = newTeams[opposingTeamIndex];
     let commentaryCardType: string = cardType;
 
+    const awardExtraPoint = () => {
+        opposingTeam.score += 1;
+        opposingTeam.extraPoints += 1;
+    };
+
     if (cardType === 'green') {
         player.greenCards += 1;
         if(player.greenCards > 1) { 
             player.yellowCards += 1;
-            opposingTeam.score += 1;
+            awardExtraPoint();
             player.suspensionTimer = 120;
             player.isPlaying = false;
             commentaryCardType = 'yellow';
         }
     } else if (cardType === 'yellow') {
         player.yellowCards += 1;
-        opposingTeam.score += 1;
+        awardExtraPoint();
         if (player.yellowCards > 1) { 
             player.isRedCarded = true;
             player.isPlaying = false;
@@ -784,7 +799,7 @@ export default function Home() {
     } else if (cardType === 'red') {
         player.isRedCarded = true;
         player.isPlaying = false;
-        opposingTeam.score += 1;
+        awardExtraPoint();
     }
 
     addCommentary({
@@ -815,23 +830,30 @@ export default function Home() {
       [`${team1.name} vs ${team2.name} - Match Summary`],
       [],
       [scoreLabel],
-      [`${team1.name}`, team1.score],
-      [`${team2.name}`, team2.score],
+      ["Team", "Score", "Lona Points", "Extra Points"],
+      [team1.name, team1.score, team1.lonaPoints, team1.extraPoints],
+      [team2.name, team2.score, team2.lonaPoints, team2.extraPoints],
       [],
       [resultLabel],
       [resultValue]
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     wsSummary["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, 
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } }, 
-      { s: { r: 6, c: 0 }, e: { r: 6, c: 1 } }, 
-      { s: { r: 7, c: 0 }, e: { r: 7, c: 1 } } 
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, 
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } }, 
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 3 } }, 
+      { s: { r: 8, c: 0 }, e: { r: 8, c: 3 } } 
     ];
     wsSummary['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
     wsSummary['A3'].s = { font: { bold: true, sz: 14 } };
-    wsSummary['A7'].s = { font: { bold: true, sz: 14 } };
-    wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }];
+    wsSummary['A8'].s = { font: { bold: true, sz: 14 } };
+
+    const headerCells = ['A4', 'B4', 'C4', 'D4'];
+    headerCells.forEach(cell => {
+      if(wsSummary[cell]) wsSummary[cell].s = { font: { bold: true } };
+    });
+
+    wsSummary['!cols'] = [{ wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, wsSummary, "Match Summary");
 
     // --- Timeline & Events Sheet ---
