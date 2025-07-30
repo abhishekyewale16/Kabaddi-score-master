@@ -11,7 +11,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 import { LiveCommentary } from '@/components/live-commentary';
-import { generateCommentary } from '@/ai/flows/generate-commentary';
+import { getCommentary } from '@/lib/commentary-data';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
@@ -109,48 +109,14 @@ export default function Home() {
 
   const addCommentary = useCallback(async (eventData: any) => {
     setIsCommentaryLoading(true);
-    try {
-        const history = commentaryLog.slice(-3);
-        const commentaryInput: any = {
-          commentaryHistory: history,
-        };
-
-        for (const key in eventData) {
-            if (eventData[key] !== undefined && eventData[key] !== null) {
-                commentaryInput[key] = eventData[key];
-            }
-        }
-        
-        const result = await generateCommentary(commentaryInput);
-        if (result && result.commentary) {
-            setCommentaryLog(prev => [result.commentary!, ...prev]);
-        } else if (result && result.error) {
-           console.error("Error generating commentary:", result.error);
-           if (result.error.includes('429')) {
-             toast({
-                title: "AI Commentary Limit Reached",
-                description: "The daily free limit for the AI commentary service has been reached. It will be available again tomorrow.",
-                variant: "destructive",
-            });
-           } else {
-             toast({
-                title: "AI Commentator Overloaded",
-                description: "The AI commentary service is currently experiencing high demand. Please try again in a moment.",
-                variant: "destructive",
-            });
-           }
-        }
-    } catch (error: any) {
-        console.error("Unhandled error in addCommentary:", error);
-        toast({
-            title: "An Unexpected Error Occurred",
-            description: "Could not fetch commentary due to an unexpected issue.",
-            variant: "destructive",
-        });
-    } finally {
-        setIsCommentaryLoading(false);
+    const commentary = getCommentary(eventData);
+    if (commentary) {
+      // Simulate a small delay to mimic loading
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setCommentaryLog(prev => [commentary, ...prev]);
     }
-  }, [commentaryLog, toast]);
+    setIsCommentaryLoading(false);
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -445,10 +411,6 @@ export default function Home() {
         }
     }
 
-    
-    const team1Score = newTeams.find(t => t.id === 1)!.score;
-    const team2Score = newTeams.find(t => t.id === 2)!.score;
-
     const scoringTeam = newTeams[scoringTeamIndex];
     const defendingTeam = newTeams[defendingTeamIndex];
     const player = scoringTeam?.players.find(p => p.id === data.playerId);
@@ -499,18 +461,13 @@ export default function Home() {
         raidingTeam: raidingTeamForCommentary.name,
         defendingTeam: defendingTeamForCommentary.name,
         raiderName: raiderForCommentary,
+        defenderName: defenderForCommentary,
         points: data.points,
         isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
         isDoOrDie: currentRaidCount === 2,
         isBonus: ['raid-bonus', 'bonus'].includes(data.pointType),
         isLona: isLona,
-        raidCount: currentRaidCount,
-        team1Score,
-        team2Score,
     };
-    if (defenderForCommentary) {
-      commentaryData.defenderName = defenderForCommentary;
-    }
     
     addCommentary(commentaryData);
     setTeams(newTeams);
@@ -541,10 +498,6 @@ export default function Home() {
     const isDoOrDieRaid = currentRaids === 2;
     let finalTeams = newTeamsWithRaidStat;
     
-    let finalTeam1Score = newTeamsWithRaidStat.find(t => t.id === 1)!.score;
-    let finalTeam2Score = newTeamsWithRaidStat.find(t => t.id === 2)!.score;
-
-
     if (isDoOrDieRaid) { 
       const opposingTeamId = isTeam1 ? 2 : 1;
       const raidingTeamName = newTeamsWithRaidStat.find(t => t.id === teamId)?.name;
@@ -558,22 +511,12 @@ export default function Home() {
       const playerIndex = newTeamsWithScore[raidingTeamIndex].players.findIndex(p => p.id === playerId)!;
       newTeamsWithScore[raidingTeamIndex].players[playerIndex].isOut = true;
 
-      finalTeam1Score = newTeamsWithScore.find(t => t.id === 1)!.score;
-      finalTeam2Score = newTeamsWithScore.find(t => t.id === 2)!.score;
-
       addCommentary({
           eventType: 'do_or_die_fail',
           raidingTeam: raidingTeam.name,
           defendingTeam: defendingTeam.name,
           raiderName: player?.name,
           points: 1,
-          isSuperRaid: false,
-          isDoOrDie: true,
-          isBonus: false,
-          isLona: false,
-          raidCount: currentRaids,
-          team1Score: finalTeam1Score,
-          team2Score: finalTeam2Score,
       });
 
       finalTeams = newTeamsWithScore;
@@ -595,16 +538,8 @@ export default function Home() {
        addCommentary({
           eventType: 'empty_raid',
           raidingTeam: raidingTeam.name,
-          defendingTeam: defendingTeam.name,
           raiderName: player?.name,
-          points: 0,
-          isSuperRaid: false,
-          isDoOrDie: false,
-          isBonus: false,
-          isLona: false,
-          raidCount: currentRaids,
-          team1Score: finalTeam1Score,
-          team2Score: finalTeam2Score,
+          raidCount: currentRaids + 1,
       });
     }
 
@@ -800,9 +735,6 @@ export default function Home() {
         raidingTeam: team.name, 
         defendingTeam: opposingTeam.name,
         raiderName: player.name, 
-        points: 1, 
-        team1Score: newTeams[0].score,
-        team2Score: newTeams[1].score,
     });
     
     setTeams(newTeams);
