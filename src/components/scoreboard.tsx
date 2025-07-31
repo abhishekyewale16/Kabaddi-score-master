@@ -71,22 +71,16 @@ interface TeamDisplayProps {
 }
 
 const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange, onTakeTimeout, isTimerRunning, isTimeoutActive }: TeamDisplayProps) => {
-
+  const isDoOrDie = raidCount === 2;
+  const teamNameClasses = cn(
+      "text-2xl md:text-3xl font-bold text-primary",
+      isRaiding && "text-primary-focus animate-pulse"
+  );
+  
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
-        <div className="flex items-center gap-3">
-            {alignment === 'left' && isRaiding && (
-                 <Badge variant="default" className="flex items-center gap-1.5 animate-pulse shadow-lg shadow-primary/50">
-                    <ShieldCheck className="w-3 h-3"/>
-                    Raiding
-                </Badge>
-            )}
-            {alignment === 'left' && raidCount === 2 && (
-                 <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
-                    <AlertTriangle className="w-3 h-3"/>
-                    Do or Die
-                </Badge>
-            )}
+      <div className="flex items-center gap-3">
+            {alignment === 'left' && isRaiding && <Badge variant="destructive">Raiding</Badge>}
             <EditableField 
                 value={team.name}
                 onSave={(newName) => onNameChange(team.id, newName)}
@@ -95,18 +89,7 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
                     isRaiding && "text-primary animate-pulse [text-shadow:_0_0_10px_hsl(var(--primary))]"
                 )}
             />
-             {alignment === 'right' && raidCount === 2 && (
-                 <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
-                    <AlertTriangle className="w-3 h-3"/>
-                    Do or Die
-                </Badge>
-            )}
-            {alignment === 'right' && isRaiding && (
-                <Badge variant="default" className="flex items-center gap-1.5 animate-pulse shadow-lg shadow-primary/50">
-                    <ShieldCheck className="w-3 h-3"/>
-                    Raiding
-                </Badge>
-            )}
+            {alignment === 'right' && isRaiding && <Badge variant="destructive">Raiding</Badge>}
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Button 
@@ -118,6 +101,7 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
                 <Hourglass className="mr-2 h-4 w-4" />
                 Timeouts: {team.timeoutsRemaining}
             </Button>
+            {isDoOrDie && <Badge variant="destructive">Do or Die</Badge>}
         </div>
       <EditableField 
         value={team.coach}
@@ -196,7 +180,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
           />
           
           <div className="flex flex-col items-center order-first md:order-none">
-            <div className="text-6xl md:text-7xl font-black tracking-tighter">
+            <div className="text-5xl md:text-6xl font-black tracking-tighter">
               <span className="text-foreground transition-all duration-300">{teams[0].score}</span>
               <span className="text-muted-foreground mx-2">:</span>
               <span className="text-foreground transition-all duration-300">{teams[1].score}</span>

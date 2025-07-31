@@ -237,32 +237,6 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     onEmptyRaid(raidingTeamId, Number(values.playerId));
     setEmptyRaidDialogOpen(false);
   }
-
-  const handleQuickScore = (points: number) => {
-    if (!isTimerRunning || isMatchOver) return;
-
-    const raider = activeRaidingPlayers[0];
-    const eliminatedPlayers = activeDefendingPlayers.slice(0, points);
-
-    if (!raider) {
-      toast({ title: "Quick Score Failed", description: "No active raider available.", variant: "destructive" });
-      return;
-    }
-    if (eliminatedPlayers.length < points) {
-        toast({ title: "Quick Score Failed", description: `Not enough active defenders to eliminate ${points}.`, variant: "destructive" });
-        return;
-    }
-    
-    onAddScore({
-        teamId: raidingTeam.id,
-        playerId: raider.id,
-        pointType: 'raid',
-        points: points,
-        eliminatedPlayerIds: eliminatedPlayers.map(p => p.id),
-    });
-
-    toast({ title: "Score Updated!", description: `Added ${points} points for ${raidingTeam.name}.` });
-  };
   
   const isTackleEvent = selectedPointType === 'tackle';
   const isLineOutEvent = selectedPointType === 'line-out';
@@ -300,14 +274,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-2">
-            <Button className="w-full text-lg font-bold" disabled={!isTimerRunning || isMatchOver} onClick={() => handleQuickScore(1)}>+1 Point</Button>
-            <Button className="w-full text-lg font-bold" disabled={!isTimerRunning || isMatchOver} onClick={() => handleQuickScore(2)}>+2 Points</Button>
-        </div>
-        <Separator className="my-2" />
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
-            <Button className="w-full" variant="secondary" disabled={!isTimerRunning || isMatchOver}>Detailed Score Event</Button>
+            <Button className="w-full" variant="default" disabled={!isTimerRunning || isMatchOver}>Add Score Event</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -393,11 +362,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     name="playerId"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center gap-2">
-                            <FormLabel>{selectedPointType === 'bonus' ? 'Raider' : isTackleEvent ? 'Tackler' : 'Raider'} ({playerSelectTeam?.name})</FormLabel>
-                            { !isTackleEvent && <Badge variant="secondary" className="text-xs">Raid in Progress</Badge>}
-                        </div>
-
+                        <FormLabel>{selectedPointType === 'bonus' ? 'Raider' : isTackleEvent ? 'Tackler' : 'Raider'} ({playerSelectTeam?.name})</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={!playerSelectTeam}>
                           <FormControl>
                             <SelectTrigger>
