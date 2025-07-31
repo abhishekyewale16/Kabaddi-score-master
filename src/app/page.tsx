@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { FoulPlay } from '@/components/foul-play';
 import { MatchResult } from '@/components/match-result';
+import { MatchAnalytics } from '@/components/match-analytics';
 
 
 const INITIAL_MATCH_DURATION = 20;
@@ -1019,6 +1020,11 @@ export default function Home() {
               <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} onSetCaptain={handleSetCaptain} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team1} />
               <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} onSetCaptain={handleSetCaptain} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team2} />
           </div>
+          
+          <div className="mt-8">
+            <MatchAnalytics teams={teams} />
+          </div>
+
           <div className="mt-8 flex justify-center">
               <Button onClick={handleExportStats} size="lg">
                   <Download className="mr-2 h-4 w-4" />
