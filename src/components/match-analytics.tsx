@@ -105,7 +105,7 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
             </CardHeader>
             <CardContent>
                 <ChartContainer config={teamPointBreakdownConfig} className="min-h-[200px] w-full">
-                    <BarChart accessibilityLayer data={teamPointBreakdownData} layout="vertical">
+                    <BarChart data={teamPointBreakdownData} layout="vertical">
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <ChartLegend content={<ChartLegendContent />} />
                         <Bar dataKey="raidPoints" stackId="a" fill="var(--color-raidPoints)" radius={[0, 4, 4, 0]} />
