@@ -76,7 +76,7 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
         <div className="flex items-center gap-3">
             {alignment === 'left' && isRaiding && (
-                 <Badge variant="default" className="flex items-center gap-1.5">
+                 <Badge variant="default" className="flex items-center gap-1.5 animate-pulse shadow-lg shadow-primary/50">
                     <ShieldCheck className="w-3 h-3"/>
                     Raiding
                 </Badge>
@@ -90,7 +90,10 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
             <EditableField 
                 value={team.name}
                 onSave={(newName) => onNameChange(team.id, newName)}
-                className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit"
+                className={cn(
+                    "text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit",
+                    isRaiding && "text-primary animate-pulse [text-shadow:_0_0_10px_hsl(var(--primary))]"
+                )}
             />
              {alignment === 'right' && raidCount === 2 && (
                  <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
@@ -99,7 +102,7 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
                 </Badge>
             )}
             {alignment === 'right' && isRaiding && (
-                <Badge variant="default" className="flex items-center gap-1.5">
+                <Badge variant="default" className="flex items-center gap-1.5 animate-pulse shadow-lg shadow-primary/50">
                     <ShieldCheck className="w-3 h-3"/>
                     Raiding
                 </Badge>
@@ -193,7 +196,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
           />
           
           <div className="flex flex-col items-center order-first md:order-none">
-            <div className="text-5xl md:text-6xl font-black tracking-tighter">
+            <div className="text-6xl md:text-7xl font-black tracking-tighter">
               <span className="text-foreground transition-all duration-300">{teams[0].score}</span>
               <span className="text-muted-foreground mx-2">:</span>
               <span className="text-foreground transition-all duration-300">{teams[1].score}</span>
