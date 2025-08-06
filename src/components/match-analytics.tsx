@@ -43,10 +43,18 @@ const teamPointBreakdownConfig = {
     },
 } satisfies ChartConfig;
 
-const topRaidersConfig = {
+const topScorersConfig = {
   raidPoints: {
     label: "Raid Points",
     color: "hsl(var(--chart-1))",
+  },
+  tacklePoints: {
+    label: "Tackle Points",
+    color: "hsl(var(--chart-2))",
+  },
+  bonusPoints: {
+    label: "Bonus Points",
+    color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig;
 
@@ -68,10 +76,10 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
     };
   }), [teams]);
 
-  const topRaidersData = useMemo(() => {
+  const topScorersData = useMemo(() => {
     return teams.flatMap(team => team.players.map(player => ({...player, teamName: team.name})))
-        .filter(player => player.raidPoints > 0)
-        .sort((a, b) => b.raidPoints - a.raidPoints)
+        .filter(player => player.totalPoints > 0)
+        .sort((a, b) => b.totalPoints - a.totalPoints)
         .slice(0, 3);
   }, [teams]);
 
@@ -113,14 +121,15 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
           <CardHeader>
               <CardTitle className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-primary" />
-                  Top Raiders
+                  Top Scorers
               </CardTitle>
-              <CardDescription>Top 3 raiders by raid points scored in the match.</CardDescription>
+              <CardDescription>Top 3 players by total points scored in the match.</CardDescription>
           </CardHeader>
           <CardContent>
-            {topRaidersData.length > 0 ? (
-                <ChartContainer config={topRaidersConfig} className="min-h-[250px] w-full">
-                    <RechartsBarChart data={topRaidersData} layout="vertical">
+            {topScorersData.length > 0 ? (
+                <ChartContainer config={topScorersConfig} className="min-h-[250px] w-full">
+                    <RechartsBarChart data={topScorersData} layout="vertical">
+                      <CartesianGrid horizontal={false} />
                       <XAxis type="number" hide />
                       <YAxis
                         dataKey="name"
@@ -131,16 +140,16 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
                         width={120}
                         className="capitalize"
                       />
-                      <Tooltip
-                        cursor={false}
-                        content={<ChartTooltipContent indicator="dot" />}
-                      />
-                      <Bar dataKey="raidPoints" fill="var(--color-raidPoints)" radius={4} barSize={30} />
+                      <Tooltip content={<ChartTooltipContent />} />
+                      <Legend content={<ChartLegendContent />} />
+                      <Bar dataKey="raidPoints" stackId="score" fill="var(--color-raidPoints)" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="tacklePoints" stackId="score" fill="var(--color-tacklePoints)" />
+                      <Bar dataKey="bonusPoints" stackId="score" fill="var(--color-bonusPoints)" radius={[4, 4, 0, 0]} />
                     </RechartsBarChart>
                 </ChartContainer>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                No raid points have been scored yet.
+                No points have been scored yet.
               </div>
             )}
           </CardContent>
