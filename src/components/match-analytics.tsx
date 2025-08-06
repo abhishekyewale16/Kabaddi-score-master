@@ -1,8 +1,8 @@
 
 "use client"
 
-import { BarChart, PieChart } from 'lucide-react';
-import type { Team } from '@/lib/types';
+import { BarChart, PieChart, Star } from 'lucide-react';
+import type { Player, Team } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   ChartContainer,
@@ -12,6 +12,9 @@ import {
   ChartLegendContent,
   ChartBar,
   ChartPie,
+  ChartXAxis,
+  ChartYAxis,
+  ChartGrid,
 } from '@/components/ui/chart';
 import { Bar, Pie, Cell } from 'recharts';
 
@@ -56,6 +59,14 @@ const raidSuccessConfig = {
     }
 } satisfies ChartConfig;
 
+const topRaidersConfig = {
+  raidPoints: {
+    label: "Raid Points",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
+
+
 export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
 
   const teamPointBreakdownData = useMemo(() => teams.map(team => {
@@ -87,6 +98,14 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
 
   }, [teams]);
 
+  const topRaidersData = useMemo(() => {
+    return teams.flatMap(team => team.players.map(player => ({...player, teamName: team.name})))
+        .filter(player => player.raidPoints > 0)
+        .sort((a, b) => b.raidPoints - a.raidPoints)
+        .slice(0, 3);
+  }, [teams]);
+
+
   const isDataAvailable = teams.some(team => team.score > 0);
 
   if (!isDataAvailable) {
@@ -94,8 +113,8 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <Card>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-3">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <BarChart className="w-5 h-5 text-primary" />
@@ -104,20 +123,23 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
                 <CardDescription>A comparison of how each team scored their points.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={teamPointBreakdownConfig} className="min-h-[200px] w-full">
-                    <BarChart data={teamPointBreakdownData} layout="vertical">
+                <ChartContainer config={teamPointBreakdownConfig} className="min-h-[250px] w-full">
+                    <BarChart data={teamPointBreakdownData} layout="horizontal">
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <ChartLegend content={<ChartLegendContent />} />
-                        <Bar dataKey="raidPoints" stackId="a" fill="var(--color-raidPoints)" radius={[0, 4, 4, 0]} />
+                        <ChartXAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
+                        <ChartYAxis type="number" hide />
+                        <ChartGrid vertical={false} />
+                        <Bar dataKey="raidPoints" stackId="a" fill="var(--color-raidPoints)" radius={[0, 0, 4, 4]} />
                         <Bar dataKey="tacklePoints" stackId="a" fill="var(--color-tacklePoints)" />
                         <Bar dataKey="bonusPoints" stackId="a" fill="var(--color-bonusPoints)" />
                         <Bar dataKey="lonaPoints" stackId="a" fill="var(--color-lonaPoints)" />
-                        <Bar dataKey="extraPoints" stackId="a" fill="var(--color-extraPoints)" radius={[4, 0, 0, 4]} />
+                        <Bar dataKey="extraPoints" stackId="a" fill="var(--color-extraPoints)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ChartContainer>
             </CardContent>
         </Card>
-        <Card>
+        <Card className="lg:col-span-1">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <PieChart className="w-5 h-5 text-primary" />
@@ -153,6 +175,42 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
                     </PieChart>
                 </ChartContainer>
             </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-primary" />
+                  Top Raiders
+              </CardTitle>
+              <CardDescription>Top 3 raiders by raid points scored in the match.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topRaidersData.length > 0 ? (
+                <ChartContainer config={topRaidersConfig} className="min-h-[250px] w-full">
+                    <BarChart data={topRaidersData} layout="vertical">
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="dot" />}
+                      />
+                      <ChartXAxis type="number" hide />
+                      <ChartYAxis
+                        dataKey="name"
+                        type="category"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        width={120}
+                        className="capitalize"
+                      />
+                      <Bar dataKey="raidPoints" fill="var(--color-raidPoints)" radius={4} barSize={30} />
+                    </BarChart>
+                </ChartContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                No raid points have been scored yet.
+              </div>
+            )}
+          </CardContent>
         </Card>
     </div>
   );
