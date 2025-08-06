@@ -10,13 +10,8 @@ import {
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
-  ChartBar,
-  ChartPie,
-  ChartXAxis,
-  ChartYAxis,
-  ChartGrid,
 } from '@/components/ui/chart';
-import { Bar, Pie, Cell } from 'recharts';
+import { Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 import type { ChartConfig } from '@/components/ui/chart';
 import { useMemo } from 'react';
@@ -124,18 +119,18 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
             </CardHeader>
             <CardContent>
                 <ChartContainer config={teamPointBreakdownConfig} className="min-h-[250px] w-full">
-                    <BarChart data={teamPointBreakdownData} layout="horizontal">
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        <ChartXAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
-                        <ChartYAxis type="number" hide />
-                        <ChartGrid vertical={false} />
+                    <RechartsBarChart data={teamPointBreakdownData} layout="horizontal">
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Legend content={<ChartLegendContent />} />
+                        <XAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
+                        <YAxis type="number" hide />
+                        <CartesianGrid vertical={false} />
                         <Bar dataKey="raidPoints" stackId="a" fill="var(--color-raidPoints)" radius={[0, 0, 4, 4]} />
                         <Bar dataKey="tacklePoints" stackId="a" fill="var(--color-tacklePoints)" />
                         <Bar dataKey="bonusPoints" stackId="a" fill="var(--color-bonusPoints)" />
                         <Bar dataKey="lonaPoints" stackId="a" fill="var(--color-lonaPoints)" />
                         <Bar dataKey="extraPoints" stackId="a" fill="var(--color-extraPoints)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
+                    </RechartsBarChart>
                 </ChartContainer>
             </CardContent>
         </Card>
@@ -152,8 +147,8 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
                     config={raidSuccessConfig}
                     className="mx-auto aspect-square max-h-[250px]"
                 >
-                    <PieChart>
-                        <ChartTooltip
+                    <RechartsPieChart>
+                        <Tooltip
                             cursor={false}
                             content={<ChartTooltipContent hideLabel />}
                         />
@@ -168,11 +163,11 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
                                 <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
                         </Pie>
-                         <ChartLegend
+                         <Legend
                             content={<ChartLegendContent nameKey="name" />}
                             className="-translate-y-[20px] flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
                         />
-                    </PieChart>
+                    </RechartsPieChart>
                 </ChartContainer>
             </CardContent>
         </Card>
@@ -187,13 +182,13 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
           <CardContent>
             {topRaidersData.length > 0 ? (
                 <ChartContainer config={topRaidersConfig} className="min-h-[250px] w-full">
-                    <BarChart data={topRaidersData} layout="vertical">
-                      <ChartTooltip
+                    <RechartsBarChart data={topRaidersData} layout="vertical">
+                      <Tooltip
                         cursor={false}
                         content={<ChartTooltipContent indicator="dot" />}
                       />
-                      <ChartXAxis type="number" hide />
-                      <ChartYAxis
+                      <XAxis type="number" hide />
+                      <YAxis
                         dataKey="name"
                         type="category"
                         tickLine={false}
@@ -203,7 +198,7 @@ export function MatchAnalytics({ teams }: MatchAnalyticsProps) {
                         className="capitalize"
                       />
                       <Bar dataKey="raidPoints" fill="var(--color-raidPoints)" radius={4} barSize={30} />
-                    </BarChart>
+                    </RechartsBarChart>
                 </ChartContainer>
             ) : (
               <div className="flex items-center justify-center h-[250px] text-muted-foreground">
