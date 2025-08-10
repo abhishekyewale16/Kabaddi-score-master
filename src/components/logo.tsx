@@ -9,19 +9,20 @@ export const Logo = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1,
+        staggerChildren: 0.1,
+        delayChildren: 0,
       },
     },
   };
 
   const pathVariants = {
-    hidden: { pathLength: 0, opacity: 0 },
+    hidden: { pathLength: 0, opacity: 0, scale: 0.8 },
     visible: {
       pathLength: 1,
       opacity: 1,
+      scale: 1,
       transition: {
-        duration: 1.5,
+        duration: 1.2,
         ease: "easeInOut",
       },
     },
@@ -35,6 +36,7 @@ export const Logo = () => {
       transition: {
         duration: 0.8,
         ease: 'easeOut',
+        delay: 0.5,
       },
     },
   };
@@ -50,36 +52,57 @@ export const Logo = () => {
         width="80"
         height="80"
         viewBox="0 0 100 100"
-        className="mb-4"
+        className="mb-2"
       >
-        <g transform="rotate(-15 50 50)">
-          {/* Top part of the '9' */}
+        <g>
+          {/* Stylized 'K' */}
           <motion.path
-            d="M 50,20 A 25 25 0 1 1 50,70"
+            d="M 25,20 L 25,80"
             stroke="hsl(var(--primary))"
             strokeWidth="10"
             fill="none"
             strokeLinecap="round"
             variants={pathVariants}
           />
-          {/* Bottom tail of the '9' */}
           <motion.path
-            d="M 50,70 Q 50 85, 70 85"
-            stroke="hsl(var(--border))"
+            d="M 65,20 L 25,50 L 65,80"
+            stroke="hsl(var(--primary))"
             strokeWidth="10"
             fill="none"
             strokeLinecap="round"
             variants={pathVariants}
+          />
+
+          {/* Stylized 'V' swoosh */}
+           <motion.path
+            d="M 75,20 Q 85 50, 75 80"
+            stroke="hsl(var(--border))"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+            variants={{
+              hidden: { pathLength: 0, opacity: 0, scale: 0.8 },
+              visible: {
+                pathLength: 1,
+                opacity: 1,
+                scale: 1,
+                transition: {
+                  duration: 1,
+                  ease: "easeInOut",
+                  delay: 0.3
+                },
+              },
+            }}
           />
         </g>
       </motion.svg>
       
       <motion.div variants={textVariants} className="text-center">
         <h1 className="text-4xl font-extrabold tracking-tight text-primary lg:text-5xl">
-          Synergy Score
+          Kabaddi Veer
         </h1>
         <p className="text-lg text-muted-foreground">
-          Holistic Match Management
+          The Ultimate Scoring Companion
         </p>
       </motion.div>
     </motion.div>
