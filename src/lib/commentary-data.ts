@@ -38,6 +38,10 @@ const commentaryTemplates: CommentaryMap = {
     "{{raiderName}} has stepped out of bounds! That's {{points}} point(s) to {{defendingTeam}}.",
     "A costly mistake by {{raiderName}}! They're out, and {{defendingTeam}} gets {{points}} point(s)."
   ],
+  raider_self_out: [
+    "An unforced error from {{raiderName}}! They are out, and {{defendingTeam}} gets an easy point.",
+    "A moment of carelessness from {{raiderName}} and that's a point gifted to {{defendingTeam}}."
+  ],
   technical_point: [
     "A technical point has been awarded to {{raidingTeam}}.",
     "The officials have awarded a technical point to {{raidingTeam}}."

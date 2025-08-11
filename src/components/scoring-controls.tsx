@@ -50,7 +50,7 @@ interface ScoringControlsProps {
 
 const formSchema = z.object({
   teamId: z.string().optional(),
-  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'line-out', 'technical_point']),
+  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'line-out', 'technical_point', 'raider_self_out']),
   points: z.coerce.number().min(0, { message: 'Points must be positive.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
   eliminatedPlayerIds: z.array(z.number()).optional(),
@@ -79,12 +79,12 @@ const formSchema = z.object({
     message: "You must select exactly one raider who was tackled.",
     path: ["eliminatedPlayerIds"],
 }).refine(data => {
-    if (data.pointType === 'line-out') {
+    if (data.pointType === 'line-out' || data.pointType === 'raider_self_out') {
         return (data.eliminatedPlayerIds?.length ?? 0) > 0;
     }
     return true;
 }, {
-    message: "You must select at least one player for a line out.",
+    message: "You must select at least one player for this event.",
     path: ["eliminatedPlayerIds"],
 }).refine(data => {
     if (data.pointType === 'technical_point') {
@@ -176,7 +176,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     
     let newTeamId: string | undefined;
 
-    if (newPointType === 'line-out') {
+    if (newPointType === 'line-out' || newPointType === 'raider_self_out') {
       newTeamId = String(defendingTeam.id);
     } else if (newPointType === 'technical_point') {
       newTeamId = undefined;
@@ -189,7 +189,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       defaultPoints = isSuperTacklePossible ? 2 : 1;
     } else if (newPointType === 'bonus') {
         defaultPoints = 1;
-    } else if (newPointType === 'technical_point' || newPointType === 'line-out') {
+    } else if (['technical_point', 'line-out', 'raider_self_out'].includes(newPointType)) {
         defaultPoints = 1;
     }
 
@@ -220,10 +220,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     };
     onAddScore(data);
     
-    let toastDescription = `Added points for ${values.pointType.replace('-', ' ')}.`;
-     if (values.pointType === 'line-out') {
+    let toastDescription = `Added points for ${values.pointType.replace(/_/g, ' ')}.`;
+     if (values.pointType === 'line-out' || values.pointType === 'raider_self_out') {
         const opposingTeam = teams.find(t => t.id !== raidingTeamId);
-        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for line out.`;
+        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name}.`;
     }
 
     toast({
@@ -240,6 +240,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const isTackleEvent = selectedPointType === 'tackle';
   const isLineOutEvent = selectedPointType === 'line-out';
+  const isRaiderSelfOutEvent = selectedPointType === 'raider_self_out';
   const isTechnicalPointEvent = selectedPointType === 'technical_point';
 
   const playerSelectionList = useMemo(() => {
@@ -253,17 +254,16 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   }, [isTackleEvent, defendingTeam, raidingTeam]);
   
   const eliminatedPlayerList = useMemo(() => {
-    if (isTackleEvent) return activeRaidingPlayers;
-    if (isLineOutEvent) return activeRaidingPlayers;
+    if (isTackleEvent || isLineOutEvent || isRaiderSelfOutEvent) return activeRaidingPlayers;
     return activeDefendingPlayers;
-  }, [isTackleEvent, isLineOutEvent, activeRaidingPlayers, activeDefendingPlayers]);
+  }, [isTackleEvent, isLineOutEvent, isRaiderSelfOutEvent, activeRaidingPlayers, activeDefendingPlayers]);
 
   const eliminatedPlayerTeam = useMemo(() => {
-    if (isTackleEvent || isLineOutEvent) return raidingTeam;
+    if (isTackleEvent || isLineOutEvent || isRaiderSelfOutEvent) return raidingTeam;
     return defendingTeam;
-  }, [isTackleEvent, isLineOutEvent, raidingTeam, defendingTeam]);
+  }, [isTackleEvent, isLineOutEvent, isRaiderSelfOutEvent, raidingTeam, defendingTeam]);
   
-  const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus', 'line-out'].includes(selectedPointType);
+  const showEliminatedPlayerSelection = ['raid', 'tackle', 'raid-bonus', 'line-out', 'raider_self_out'].includes(selectedPointType);
 
   return (
     <Card className="bg-card border-none">
@@ -320,6 +320,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                             <FormControl><RadioGroupItem value="line-out" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><UserMinus className="w-4 h-4" /> Line Out</FormLabel>
                           </FormItem>
+                           <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="raider_self_out" /></FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2"><UserMinus className="w-4 h-4" /> Raider Self Out</FormLabel>
+                          </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="technical_point" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Technical Point</FormLabel>
@@ -356,7 +360,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                   />
                 )}
 
-                {!isLineOutEvent && !isTechnicalPointEvent &&
+                {!isLineOutEvent && !isTechnicalPointEvent && !isRaiderSelfOutEvent &&
                   <FormField
                     control={form.control}
                     name="playerId"
@@ -389,7 +393,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                         render={() => (
                             <FormItem>
                                 <div className="flex justify-between items-center">
-                                  <FormLabel>{isLineOutEvent ? `Players Out (${eliminatedPlayerTeam?.name})` : `Eliminated Players (${eliminatedPlayerTeam?.name})` }</FormLabel>
+                                  <FormLabel>{isLineOutEvent || isRaiderSelfOutEvent ? `Player Out (${eliminatedPlayerTeam?.name})` : `Eliminated Players (${eliminatedPlayerTeam?.name})` }</FormLabel>
                                 </div>
                                 <div className="space-y-2 rounded-md border p-2 max-h-40 overflow-y-auto">
                                     {eliminatedPlayerList.map((player) => (
@@ -410,7 +414,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                                                     field.onChange(newSelectedIds);
                                                                     if (selectedPointType.includes('raid')) {
                                                                       form.setValue('points', newSelectedIds?.length ?? 0);
-                                                                    } else if (selectedPointType === 'line-out') {
+                                                                    } else if (selectedPointType === 'line-out' || selectedPointType === 'raider_self_out') {
                                                                       form.setValue('points', newSelectedIds?.length ?? 0);
                                                                       form.setValue('teamId', String(defendingTeam.id))
                                                                     }
@@ -470,7 +474,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                           {selectedPointType.includes('raid') ? 'Raid Points' : selectedPointType === 'bonus' ? 'Bonus Points' : 'Points'}
                         </FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="e.g., 1" {...field} disabled={selectedPointType.includes('raid') || selectedPointType === 'line-out' || selectedPointType === 'bonus'} />
+                          <Input type="number" placeholder="e.g., 1" {...field} disabled={selectedPointType.includes('raid') || selectedPointType === 'line-out' || selectedPointType === 'bonus' || selectedPointType === 'raider_self_out'} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -326,7 +326,7 @@ export default function Home() {
     }
     
     let scoringTeamIndex: number;
-    if (data.pointType === 'line-out') {
+    if (data.pointType === 'line-out' || data.pointType === 'raider_self_out') {
         scoringTeamIndex = newTeams.findIndex(t => t.id !== raidingTeamId)!;
     } else {
         scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId)!;
@@ -341,7 +341,7 @@ export default function Home() {
         let teamToUpdateIndex: number;
         if (isTackleEvent) {
             teamToUpdateIndex = newTeams.findIndex(t => t.id === raidingTeamId)!;
-        } else if (data.pointType === 'line-out') {
+        } else if (data.pointType === 'line-out' || data.pointType === 'raider_self_out') {
             teamToUpdateIndex = newTeams.findIndex(t => t.id === raidingTeamId)!;
         } else {
             teamToUpdateIndex = defendingTeamIndex;
@@ -355,7 +355,7 @@ export default function Home() {
         });
     }
 
-    if (data.pointType !== 'line-out') {
+    if (data.pointType !== 'line-out' && data.pointType !== 'raider_self_out') {
         let teamScoreIncrement = 0;
         if (data.pointType === 'bonus') {
             teamScoreIncrement = 1;
@@ -419,6 +419,8 @@ export default function Home() {
         revivalsMade = data.points; // Revive one player for each touch point
     } else if (data.pointType === 'tackle') {
         revivalsMade = 1; // Revive one player for a tackle
+    } else if (data.pointType === 'raider_self_out') {
+        revivalsMade = 1;
     }
 
     if (revivalsMade > 0) {
@@ -439,7 +441,7 @@ export default function Home() {
         }
     }
 
-    const teamToCheckForLona = isTackleEvent ? raidingTeamId : (data.pointType === 'line-out' ? raidingTeamId : defendingTeamId);
+    const teamToCheckForLona = isTackleEvent ? raidingTeamId : (['line-out', 'raider_self_out'].includes(data.pointType) ? raidingTeamId : defendingTeamId);
     const teamIndexForLona = newTeams.findIndex(t => t.id === teamToCheckForLona)!;
     
     if (teamIndexForLona !== -1) {
@@ -469,8 +471,8 @@ export default function Home() {
     
     const isTechnicalPoint = data.pointType === 'technical_point';
 
-    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : data.pointType === 'line-out' ? teams.find(t => t.id === raidingTeamId)! : scoringTeam;
-    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : data.pointType === 'line-out' ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam; 
+    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : (['line-out', 'raider_self_out'].includes(data.pointType) ? teams.find(t => t.id === raidingTeamId)! : scoringTeam);
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : (['line-out', 'raider_self_out'].includes(data.pointType) ? teams.find(t => t.id !== raidingTeamId)! : defendingTeam); 
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
     const totalPointsInRaid = data.points + (['raid-bonus', 'bonus'].includes(data.pointType) ? 1 : 0);
     const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus');
@@ -480,6 +482,8 @@ export default function Home() {
         eventType = data.points === 2 ? 'super_tackle_score' : 'tackle_score';
     } else if (data.pointType === 'line-out') {
         eventType = 'line_out';
+    } else if (data.pointType === 'raider_self_out') {
+        eventType = 'raider_self_out';
     } else if (isTechnicalPoint) {
         eventType = 'technical_point';
     } else {
@@ -492,7 +496,7 @@ export default function Home() {
     if (data.pointType === 'bonus') {
         const activeRaider = teams.find(t => t.id === raidingTeamId)?.players.find(p => p.id === data.playerId);
         raiderForCommentary = activeRaider?.name;
-    } else if (eventType === 'line_out') {
+    } else if (eventType === 'line_out' || eventType === 'raider_self_out') {
         const eliminatedPlayers = teams.find(t => t.id === raidingTeamId)?.players.filter(p => data.eliminatedPlayerIds?.includes(p.id));
         raiderForCommentary = eliminatedPlayers?.map(p => p.name).join(', ') ?? 'A player';
     } else if (isTackleEvent) {
@@ -523,7 +527,7 @@ export default function Home() {
     
     addCommentary(commentaryData);
     setTeams(newTeams);
-    if (isRaidEvent || isTackleEvent || data.pointType === 'line-out') {
+    if (isRaidEvent || isTackleEvent || data.pointType === 'line-out' || data.pointType === 'raider_self_out') {
       switchRaidingTeam();
     }
 }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId, toast]);
