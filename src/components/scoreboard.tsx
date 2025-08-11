@@ -72,10 +72,6 @@ interface TeamDisplayProps {
 
 const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange, onTakeTimeout, isTimerRunning, isTimeoutActive }: TeamDisplayProps) => {
   const isDoOrDie = raidCount === 2;
-  const teamNameClasses = cn(
-      "text-2xl md:text-3xl font-bold text-primary",
-      isRaiding && "text-primary-focus animate-pulse"
-  );
   
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
@@ -103,17 +99,20 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
             </Button>
             {isDoOrDie && <Badge variant="destructive">Do or Die</Badge>}
         </div>
-      <EditableField 
-        value={team.coach}
-        onSave={(newCoach) => onCoachChange(team.id, newCoach)}
-        icon={<Users className="w-4 h-4" />}
-        className="mt-1"
-      />
-       <EditableField 
-        value={team.city}
-        onSave={(newCity) => onCityChange(team.id, newCity)}
-        icon={<MapPin className="w-4 h-4" />}
-      />
+        <div className={cn("flex flex-col", alignment === 'left' ? 'md:items-end' : 'md:items-start')}>
+            <EditableField 
+                value={team.coach}
+                onSave={(newCoach) => onCoachChange(team.id, newCoach)}
+                icon={<Users className="w-4 h-4" />}
+                className="mt-1 text-xs"
+            />
+            <EditableField 
+                value={team.city}
+                onSave={(newCity) => onCityChange(team.id, newCity)}
+                icon={<MapPin className="w-4 h-4" />}
+                 className="text-xs"
+            />
+        </div>
     </div>
   );
 };
