@@ -977,8 +977,8 @@ export default function Home() {
       <main className="min-h-screen bg-background text-foreground font-body">
         <div className="container mx-auto p-4 md:p-8">
           <header className="text-center mb-8">
-            <h1 className="text-4xl font-extrabold tracking-tight text-primary lg:text-5xl">
-              Kabaddi Veer
+            <h1 className="text-4xl tracking-tight text-primary lg:text-5xl">
+              <span className="font-normal">Kabaddi</span><span className="font-black">Veer</span>
             </h1>
             <p className="text-lg text-muted-foreground">
               The Ultimate Scoring Companion
