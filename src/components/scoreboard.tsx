@@ -68,9 +68,10 @@ interface TeamDisplayProps {
   onTakeTimeout: (teamId: number) => void;
   isTimerRunning: boolean;
   isTimeoutActive: boolean;
+  isMatchPristine: boolean;
 }
 
-const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange, onTakeTimeout, isTimerRunning, isTimeoutActive }: TeamDisplayProps) => {
+const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange, onTakeTimeout, isTimerRunning, isTimeoutActive, isMatchPristine }: TeamDisplayProps) => {
   const isDoOrDie = raidCount === 2;
   
   return (
@@ -99,20 +100,22 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
             </Button>
             {isDoOrDie && <Badge variant="destructive">Do or Die</Badge>}
         </div>
-        <div className={cn("flex flex-col", alignment === 'left' ? 'md:items-end' : 'md:items-start')}>
-            <EditableField 
-                value={team.coach}
-                onSave={(newCoach) => onCoachChange(team.id, newCoach)}
-                icon={<Users className="w-4 h-4" />}
-                className="mt-1 text-xs"
-            />
-            <EditableField 
-                value={team.city}
-                onSave={(newCity) => onCityChange(team.id, newCity)}
-                icon={<MapPin className="w-4 h-4" />}
-                 className="text-xs"
-            />
-        </div>
+        {isMatchPristine && (
+            <div className={cn("flex flex-col", alignment === 'left' ? 'md:items-end' : 'md:items-start')}>
+                <EditableField 
+                    value={team.coach}
+                    onSave={(newCoach) => onCoachChange(team.id, newCoach)}
+                    icon={<Users className="w-4 h-4" />}
+                    className="mt-1 text-xs"
+                />
+                <EditableField 
+                    value={team.city}
+                    onSave={(newCity) => onCityChange(team.id, newCity)}
+                    icon={<MapPin className="w-4 h-4" />}
+                    className="text-xs"
+                />
+            </div>
+        )}
     </div>
   );
 };
@@ -180,6 +183,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
             onTakeTimeout={onTakeTimeout}
             isTimerRunning={timer.isRunning}
             isTimeoutActive={timer.isTimeout}
+            isMatchPristine={isMatchPristine}
           />
           
           <div className="flex flex-col items-center order-first md:order-none">
@@ -213,6 +217,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
             onTakeTimeout={onTakeTimeout}
             isTimerRunning={timer.isRunning}
             isTimeoutActive={timer.isTimeout}
+            isMatchPristine={isMatchPristine}
           />
         </div>
         <div className="mt-6 flex flex-col items-center gap-4">
@@ -252,5 +257,3 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
     </Card>
   );
 }
-
-    
