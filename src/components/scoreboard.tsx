@@ -131,6 +131,7 @@ interface ScoreboardProps {
   raidState: RaidState;
   raidingTeamId: number;
   matchDuration: number;
+  tournamentName: string;
   isMatchPristine: boolean;
   isTimeUp: boolean;
   isMatchOver: boolean;
@@ -140,11 +141,12 @@ interface ScoreboardProps {
   onTeamNameChange: (teamId: number, newName: string) => void;
   onTeamCoachChange: (teamId: number, newCoach: string) => void;
   onTeamCityChange: (teamId: number, newCity: string) => void;
+  onTournamentNameChange: (newName: string) => void;
   onMatchDurationChange: (newDuration: number) => void;
   onTakeTimeout: (teamId: number) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onEndMatch, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange, onTakeTimeout, isMatchPristine, isTimeUp, isMatchOver }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, tournamentName, onToggleTimer, onResetTimer, onEndMatch, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onTournamentNameChange, onMatchDurationChange, onTakeTimeout, isMatchPristine, isTimeUp, isMatchOver }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
 
   let buttonText = timer.isRunning ? 'Pause' : 'Start';
@@ -159,10 +161,12 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
   return (
     <Card className="overflow-hidden bg-card border-none">
       <CardHeader className="p-4 bg-card-foreground/5">
-        <CardTitle className="text-center text-lg md:text-xl font-semibold flex items-center justify-center gap-2">
-          <Trophy className="w-5 h-5 text-primary" />
-          Live Match Score
-        </CardTitle>
+        <EditableField 
+            value={tournamentName}
+            onSave={onTournamentNameChange}
+            icon={<Trophy className="w-5 h-5 text-primary" />}
+            className="text-center text-lg md:text-xl font-semibold justify-center text-foreground"
+        />
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center text-center gap-4">
@@ -249,3 +253,5 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
     </Card>
   );
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -40,6 +39,7 @@ export default function Home() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [teams, setTeams] = useState<[Team, Team]>(initialTeams);
+  const [tournamentName, setTournamentName] = useState('My Tournament');
   const [raidState, setRaidState] = useState<RaidState>({ team1: 0, team2: 0 });
   const [raidingTeamId, setRaidingTeamId] = useState<number>(1);
   const [commentaryLog, setCommentaryLog] = useState<string[]>([]);
@@ -80,6 +80,9 @@ export default function Home() {
             }
         });
         setTeams(savedState.teams);
+        if (savedState.tournamentName) {
+            setTournamentName(savedState.tournamentName);
+        }
         setRaidState(savedState.raidState);
         setRaidingTeamId(savedState.raidingTeamId);
         setCommentaryLog(savedState.commentaryLog);
@@ -101,6 +104,7 @@ export default function Home() {
     try {
       const stateToSave = {
         teams,
+        tournamentName,
         raidState,
         raidingTeamId,
         commentaryLog,
@@ -114,7 +118,7 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to save state to localStorage", error);
     }
-  }, [teams, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isTimeUp, isMatchOver, isLoaded]);
+  }, [teams, tournamentName, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isTimeUp, isMatchOver, isLoaded]);
 
   const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0 && !isTimeUp);
   const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
@@ -256,6 +260,7 @@ export default function Home() {
       half: 1,
       isTimeout: false,
     });
+    setTournamentName("My Tournament");
     setRaidState({ team1: 0, team2: 0 });
     setRaidingTeamId(1);
     setCommentaryLog([]);
@@ -646,6 +651,10 @@ export default function Home() {
     );
   }, []);
 
+  const handleTournamentNameChange = useCallback((newName: string) => {
+    setTournamentName(newName);
+  }, []);
+
 
   const handlePlayerNameChange = useCallback((teamId: number, playerId: number, newName: string) => {
     setTeams(currentTeams =>
@@ -833,7 +842,7 @@ export default function Home() {
     }
 
     const summaryData = [
-      [`${team1.name} vs ${team2.name} - Match Summary`],
+      [`${team1.name} vs ${team2.name} - ${tournamentName}`],
       [],
       [scoreLabel],
       ["Team", "Score", "Lona Points", "Extra Points"],
@@ -945,7 +954,7 @@ export default function Home() {
     
     const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;
     XLSX.writeFile(wb, matchFileName);
-  }, [teams, matchEvents, isMatchOver]);
+  }, [teams, matchEvents, isMatchOver, tournamentName]);
 
   const handleExportCommentary = useCallback(() => {
     const doc = new Document({
@@ -997,11 +1006,13 @@ export default function Home() {
                 raidState={raidState}
                 raidingTeamId={raidingTeamId}
                 matchDuration={matchDuration}
+                tournamentName={tournamentName}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
                 onTeamNameChange={handleTeamNameChange}
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
+                onTournamentNameChange={handleTournamentNameChange}
                 onMatchDurationChange={handleMatchDurationChange}
                 onTakeTimeout={handleTakeTimeout}
                 isMatchPristine={isMatchPristine}
@@ -1050,3 +1061,5 @@ export default function Home() {
     </>
   );
 }
+
+    
