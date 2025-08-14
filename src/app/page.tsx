@@ -49,6 +49,7 @@ export default function Home() {
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [isMatchOver, setIsMatchOver] = useState(false);
+  const [matchSummary, setMatchSummary] = useState('');
 
   const [timer, setTimer] = useState({
     minutes: INITIAL_MATCH_DURATION,
@@ -91,6 +92,9 @@ export default function Home() {
         setTimer(savedState.timer);
         setIsTimeUp(savedState.isTimeUp);
         setIsMatchOver(savedState.isMatchOver);
+        if (savedState.matchSummary) {
+          setMatchSummary(savedState.matchSummary);
+        }
       }
     } catch (error) {
       console.error("Failed to load state from localStorage", error);
@@ -113,12 +117,13 @@ export default function Home() {
         timer,
         isTimeUp,
         isMatchOver,
+        matchSummary,
       };
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
     } catch (error) {
       console.error("Failed to save state to localStorage", error);
     }
-  }, [teams, tournamentName, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isTimeUp, isMatchOver, isLoaded]);
+  }, [teams, tournamentName, raidState, raidingTeamId, commentaryLog, matchDuration, matchEvents, timer, isTimeUp, isMatchOver, matchSummary, isLoaded]);
 
   const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0 && !isTimeUp);
   const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
@@ -268,6 +273,7 @@ export default function Home() {
     setMatchEvents([]);
     setIsTimeUp(false);
     setIsMatchOver(false);
+    setMatchSummary('');
     const newInitialTeams = JSON.parse(JSON.stringify(initialTeams));
     newInitialTeams.forEach((team: Team) => team.timeoutsRemaining = 2);
     setTeams(newInitialTeams);
@@ -827,6 +833,10 @@ export default function Home() {
     setTeams(newTeams);
   }, [teams, addCommentary]);
 
+  const handleSummaryChange = (newSummary: string) => {
+    setMatchSummary(newSummary);
+  }
+
   const handleExportStats = useCallback(() => {
     const wb = XLSX.utils.book_new();
     const [team1, team2] = teams;
@@ -841,7 +851,7 @@ export default function Home() {
         resultValue = team1.score > team2.score ? team1.name : team2.score > team1.score ? team2.name : "Scores are level";
     }
 
-    const summaryData = [
+    const summaryData: (string | number)[][] = [
       [`${team1.name} vs ${team2.name} - ${tournamentName}`],
       [],
       [scoreLabel],
@@ -852,16 +862,34 @@ export default function Home() {
       [resultLabel],
       [resultValue]
     ];
+    
+    if (matchSummary) {
+      summaryData.push([]);
+      summaryData.push(["Match Summary"]);
+      summaryData.push([matchSummary]);
+    }
+
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    wsSummary["!merges"] = [
+    const merges = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }, 
       { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } }, 
       { s: { r: 7, c: 0 }, e: { r: 7, c: 3 } }, 
       { s: { r: 8, c: 0 }, e: { r: 8, c: 3 } } 
     ];
+    if (matchSummary) {
+      merges.push({ s: { r: 10, c: 0 }, e: { r: 10, c: 3 } });
+      merges.push({ s: { r: 11, c: 0 }, e: { r: 11, c: 3 } });
+    }
+    wsSummary["!merges"] = merges;
+
     wsSummary['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
     wsSummary['A3'].s = { font: { bold: true, sz: 14 } };
     wsSummary['A8'].s = { font: { bold: true, sz: 14 } };
+    if (matchSummary) {
+      wsSummary['A11'].s = { font: { bold: true, sz: 14 } };
+      wsSummary['A12'].s = { alignment: { wrapText: true } };
+    }
+
 
     const headerCells = ['A4', 'B4', 'C4', 'D4'];
     headerCells.forEach(cell => {
@@ -954,7 +982,7 @@ export default function Home() {
     
     const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;
     XLSX.writeFile(wb, matchFileName);
-  }, [teams, matchEvents, isMatchOver, tournamentName]);
+  }, [teams, matchEvents, isMatchOver, tournamentName, matchSummary]);
 
   const handleExportCommentary = useCallback(() => {
     const doc = new Document({
@@ -1035,7 +1063,7 @@ export default function Home() {
             </div>
           </div>
 
-          <MatchResult teams={teams} isMatchOver={isMatchOver} />
+          <MatchResult teams={teams} isMatchOver={isMatchOver} onSummaryChange={handleSummaryChange} matchSummary={matchSummary} />
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
               <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} onSetCaptain={handleSetCaptain} isSubstitutionAllowed={isSubstitutionPeriod} substitutionsMade={substitutionsMadeThisBreak.team1} />

@@ -6,17 +6,24 @@ import type { Team } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Trophy } from 'lucide-react';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { Button } from './ui/button';
 
 interface MatchResultProps {
     teams: [Team, Team];
     isMatchOver: boolean;
+    matchSummary: string;
+    onSummaryChange: (summary: string) => void;
 }
 
-export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
+export function MatchResult({ teams, isMatchOver, matchSummary, onSummaryChange }: MatchResultProps) {
   const [team1, team2] = teams;
   const [winner, setWinner] = useState<Team | null>(null);
   const [isDraw, setIsDraw] = useState(false);
@@ -56,7 +63,7 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
               Final Result
             </DialogTitle>
           </DialogHeader>
-          <div className="text-center z-10 py-6">
+          <div className="text-center z-10 py-6 space-y-6">
             {winner && (
               <div className="inline-block bg-primary/10 border-2 border-primary rounded-lg px-8 py-4 space-y-2">
                 <p className="text-lg md:text-xl font-bold text-primary break-words px-4">
@@ -77,7 +84,21 @@ export function MatchResult({ teams, isMatchOver }: MatchResultProps) {
                   </p>
               </div>
             )}
+
+            <div className="px-4 space-y-2 text-left">
+              <Label htmlFor="match-summary">Match Summary (Optional)</Label>
+              <Textarea 
+                id="match-summary"
+                placeholder="Add any notes, highlights, or observations about the match..."
+                value={matchSummary}
+                onChange={(e) => onSummaryChange(e.target.value)}
+                className="min-h-[100px]"
+              />
+            </div>
           </div>
+           <DialogFooter>
+             <Button onClick={() => setIsOpen(false)}>Close</Button>
+           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
