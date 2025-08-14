@@ -192,14 +192,17 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     } else if (['technical_point', 'line-out', 'raider_self_out'].includes(newPointType)) {
         defaultPoints = 1;
     }
+    
+    setTimeout(() => {
+        form.reset({
+            pointType: newPointType,
+            teamId: newTeamId,
+            playerId: '',
+            points: defaultPoints,
+            eliminatedPlayerIds: [],
+        });
+    }, 0);
 
-    form.reset({
-        pointType: newPointType,
-        teamId: newTeamId,
-        playerId: '',
-        points: defaultPoints,
-        eliminatedPlayerIds: [],
-    });
   }, [raidingTeam, defendingTeam, form, isSuperTacklePossible]);
 
 
